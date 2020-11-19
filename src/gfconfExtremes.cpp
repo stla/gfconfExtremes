@@ -101,3 +101,23 @@ double Jacobian(const double g,
   }
   return Jmean;
 }
+
+const double log_gpd_dens(const double g, const double s, const double a, 
+                          Rcpp::NumericVector X, const size_t Jnumb, 
+                          const unsigned n, std::default_random_engine& generator){
+  double log_density;
+  X = X[X > a];
+  const double Max = Rcpp::max(X-a);
+  const double Min = Rcpp::min(X-a);
+  if(s > 0 && g > (-s / Max) && Min > 0.0 && a > 0.0 && g > -0.5){
+    const double J = Jacobian(g, s, a, Jnumb, X, generator);
+    if(g == 0.0){
+      log_density = -1 / s * Rcpp::sum(X - a) + log(J) - n * log(s + a);
+    }else{
+      log_density = Rcpp::sum((-1 / g - 1) * log1p(g * (X - a) / s)) + log(J) - n * log(s + a);
+    }
+  }else{
+    log_density = -INFINITY;
+  }
+  return log_density;
+}
