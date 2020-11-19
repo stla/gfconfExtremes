@@ -24,70 +24,73 @@ Fiducial.GPD.unknown.thresh <- function(
   # chain.length is the length of the MCMC chain.
   # burnin is number of the first MCMC iterations omitted from the chain.
   # J.numb is the number of subsamples that are taken from the Jacobian.
-
+  
   X <- sort(X)
   n <- length(X)
-
+  
   # Intialize the default values for the tuning parameters of the MCMC chain.
-
+  
   if (i == "NaN") i <- n * .85
-
+  
   mle.fit <- gpd.fit(X, X[i], show = FALSE)
   if (g == "NaN") g <- mle.fit$mle[2]
   if (s == "NaN") s <- mle.fit$mle[1]
-
+  
   if (sd.g == "NaN") sd.g <- 2 * abs(g) / 3
   if (sd.s == "NaN") sd.s <- 2 * s / 3
-
+  
   if (skip.number == "NaN") skip.number <- 5
-
+  
   number.iterations <- (skip.number + 1) * chain.length + burnin
-
+  
   # run the MCMC chain.
   chain.output <- MCMC.chain(
     X, beta, g, s, i, p1, p2, lambda1, lambda2, sd.g, sd.s, skip.number,
     number.iterations, burnin, J.numb
   )
-
+  
   chain <- chain.output[, 1:3]
   acceptance.rate <- mean(chain.output[, 4])
-
+  
   # estimated threshold
   median.index <- median(chain.output[, 3])
-
+  
   beta.length <- length(beta)
-
+  
   beta.label <- paste("Beta", 1:beta.length)
   names(beta) <- beta.label
-
+  
   # sort the quantiles chain.
   quantile.chain <- apply(cbind(chain.output[, 5:(4 + beta.length)], 0), 2, sort)
-
+  
   q.est.median <- apply(quantile.chain, 2, median)[1:beta.length]
   names(q.est.median) <- beta.label
-
+  
   quantile.chain <- as.matrix(quantile.chain[, 1:beta.length])
-
+  
   gamma.est.median <- median(chain[, 1])
-
-
+  
+  
   # CI for the quantiles. Upper, lower, and symmetric
-  quantile.CI.upper <- quantile.chain[(1 - (1 - CI.level) / 2) * (chain.length), 1:beta.length]
-  quantile.CI.lower <- quantile.chain[(1 - CI.level) / 2 * (chain.length), 1:beta.length]
+  quantile.CI.upper <- 
+    quantile.chain[(1 - (1 - CI.level) / 2) * (chain.length), 1:beta.length]
+  quantile.CI.lower <- 
+    quantile.chain[(1 - CI.level) / 2 * (chain.length), 1:beta.length]
   quantile.CI.symmetric <- rbind(quantile.CI.lower, quantile.CI.upper)
-
+  
   colnames(quantile.CI.symmetric) <- beta.label
-
-
+  
+  
   # CI for the "shortest" interval.
   quantile.CI.shortest <- matrix(0, 2, beta.length)
   for (i in 1:beta.length) {
     quantile.CI.shortest[, i] <- CI.short.fast(quantile.chain[, i], CI.level)
   }
-
-  rownames(quantile.CI.shortest) <- c("quintile.CI.short.lower", "quintile.CI.short.upper")
+  
+  rownames(quantile.CI.shortest) <- 
+    c("quintile.CI.short.lower", "quintile.CI.short.upper")
   colnames(quantile.CI.shortest) <- beta.label
-
+  
   return(list(
     median.threshold = X[median.index], Beta = beta, Beta.quantile = q.est.median,
     quantile.CI.symmetric = quantile.CI.symmetric,
@@ -114,19 +117,20 @@ Jacobian <- function(g, s, a, J.numb, X) {
   for (i in 1:J.numb) {
     X.choose.3[i, ] <- sample(X, 3)
   }
-
+  
   if (g != 0) {
     X.diff <- cbind(X.choose.3[, 2] - X.choose.3[, 3], -X.choose.3[, 1] +
-      X.choose.3[, 3], X.choose.3[, 1] - X.choose.3[, 2])
-    J.mat <- (log(1 + g * (X.choose.3 - a) / s) * (1 + g * (X.choose.3 - a) / s) / g^2) * (X.diff)
+                      X.choose.3[, 3], X.choose.3[, 1] - X.choose.3[, 2])
+    J.mat <- (log(1 + g * (X.choose.3 - a) / s) * 
+                (1 + g * (X.choose.3 - a) / s) / g^2) * (X.diff)
     J.mean <- mean(abs(apply(J.mat, 1, sum)))
   } else {
     X.diff <- cbind(X.choose.3[, 2] - X.choose.3[, 3], -X.choose.3[, 1] +
-      X.choose.3[, 3], X.choose.3[, 1] - X.choose.3[, 2])
+                      X.choose.3[, 3], X.choose.3[, 1] - X.choose.3[, 2])
     J.mat <- apply(X.diff, 1, prod) / (2 * s)
     J.mean <- mean(abs(J.mat))
   }
-
+  
   return(J.mean)
 }
 
@@ -134,13 +138,14 @@ Jacobian <- function(g, s, a, J.numb, X) {
 
 log.gpd.dens <- function(g, s, a, i, X, J.numb, n) {
   # data must be pre-sorted
-
+  
   X <- X[X > a]
-
+  
   if (s > 0 & g > (-s / max(X - a)) & min(X - a) > 0 & a > 0 & g > -.5) {
     J <- Jacobian(g, s, a, J.numb, X)
     if (g != 0) {
-      log.density <- sum((-1 / g - 1) * log(1 + g * (X - a) / s)) + log(J) - n * log(s + a)
+      log.density <- 
+        sum((-1 / g - 1) * log(1 + g * (X - a) / s)) + log(J) - n * log(s + a)
     } else {
       log.density <- -1 / s * sum(X - a) + log(J) - n * log(s + a)
     }
@@ -172,23 +177,23 @@ MCMC.newpoint <- function(g, s, i, p1, p2, lambda, sd.g, sd.s, X, J.numb, n) {
   # p1 is the probability that we change g ans s.
   # p2 is the probability that we move + or - when we move indexes
   # lambda is the poisson parameter
-
+  
   # this portion proposes a new i (new threshold)
   a <- X[i]
   if (runif(1) > p1) {
     Bern <- sample(c(-1, 1), 1, prob = c(1 - p2, p2))
-
+    
     if (Bern == 1) {
       plus.minus <- n
       while (plus.minus > (n - i - 10)) {
         plus.minus <- rpois(1, lambda)
       }
       i.star <- i + plus.minus
-
+      
       dens.pois.star <- 1 / ppois(n - i - 10, lambda) * p2
       dens.pois <- 1 / ppois(i.star - 1, lambda) * (1 - p2)
     }
-
+    
     if (Bern == -1) {
       plus.minus <- n
       lambda <- min(i, lambda)
@@ -199,49 +204,53 @@ MCMC.newpoint <- function(g, s, i, p1, p2, lambda, sd.g, sd.s, X, J.numb, n) {
       dens.pois.star <- 1 / ppois(i - 1, lambda) * (1 - p2)
       dens.pois <- 1 / ppois(n - i.star - 10, lambda) * p2
     }
-
+    
     a.star <- X[i.star]
-
+    
     gs.star <- c(g, s + g * (X[i.star] - X[i]))
-    MH.ratio <- exp(log.gpd.dens(gs.star[1], gs.star[2], a.star, i.star, X, J.numb, n) - log.gpd.dens(g, s, a, i, X, J.numb, n)) *
+    MH.ratio <- 
+      exp(log.gpd.dens(gs.star[1], gs.star[2], a.star, i.star, X, J.numb, n) - 
+            log.gpd.dens(g, s, a, i, X, J.numb, n)) *
       dens.pois / dens.pois.star
-
-
+    
+    
     # this proposes a new gamma and sigma.
   } else {
     i.star <- i
     a.star <- X[i.star]
     gs.star <- rcauchy(2, c(g, s), c(sd.g, sd.s)) # rnorm(2,c(g,s),c(sd.g,sd.s))
-
-    MH.ratio <- exp(log.gpd.dens(gs.star[1], gs.star[2], a.star, i.star, X, J.numb, n) - log.gpd.dens(g, s, a, i, X, J.numb, n))
+    
+    MH.ratio <- 
+      exp(log.gpd.dens(gs.star[1], gs.star[2], a.star, i.star, X, J.numb, n) - 
+            log.gpd.dens(g, s, a, i, X, J.numb, n))
   }
-
+  
   U <- runif(1)
-
+  
   # Metropolis-Hastings ratio to accept the new point.
   if (U <= MH.ratio & MH.ratio != "NaN" & MH.ratio != "Inf") {
     newpoint <- c(gs.star, i.star, 0)
   } else {
     newpoint <- c(g, s, i, 0)
   }
-
+  
   return(newpoint)
 }
 
 
 ########### The function that runs the MCMC chain we will use to create intervals and estimates##############
 
-MCMC.chain <- function(X, beta, g, s, i, p1, p2, lambda1, lambda2, sd.g, sd.s, skip.number,
-                       number.iterations, burnin, J.numb) {
+MCMC.chain <- function(X, beta, g, s, i, p1, p2, lambda1, lambda2, sd.g, sd.s, 
+                       skip.number, number.iterations, burnin, J.numb) {
   n <- length(X)
   X <- sort(X)
   # transfrom the data X'=X-X(1)
   min.X <- min(X)
   X <- (X - min.X)
-
+  
   x.t <- matrix(0, nrow = number.iterations, ncol = 4 + length(beta))
   x.t[1, ] <- c(g, s, i, 0, quantile.value(g, s, X[i], 1 - i / n, beta))
-
+  
   # propose new points and run the MCMC chain for a specified chain length
   for (j in 1:(number.iterations - 1)) {
     if (j %% 10 == 1) {
@@ -249,29 +258,35 @@ MCMC.chain <- function(X, beta, g, s, i, p1, p2, lambda1, lambda2, sd.g, sd.s, s
     } else {
       lambda <- lambda1
     }
-    x.t[j + 1, 1:4] <- MCMC.newpoint(x.t[j, 1], x.t[j, 2], x.t[j, 3], p1, p2, lambda, sd.g, sd.s, X, J.numb, n)
-    x.t[j + 1, 5:(4 + length(beta))] <- quantile.value(x.t[j + 1, 1], x.t[j + 1, 2], X[x.t[j + 1, 3]], 1 - x.t[j + 1, 3] / n, beta)
+    x.t[j + 1, 1:4] <- MCMC.newpoint(
+      x.t[j, 1], x.t[j, 2], x.t[j, 3], p1, p2, lambda, sd.g, sd.s, X, J.numb, n
+    )
+    x.t[j + 1, 5:(4 + length(beta))] <- quantile.value(
+      x.t[j + 1, 1], x.t[j + 1, 2], X[x.t[j + 1, 3]], 1 - x.t[j + 1, 3] / n, beta
+    )
   }
-
+  
   # Delet the first values as the "burnin"
   x.t <- x.t[(burnin + 1):number.iterations, ]
-
+  
   # Thin the chain by keeping every skip.number+1 iteration of the MCMC chain
   number.iterations <- nrow(x.t)
   every.ith <- c(1, rep(0, skip.number))
-  eliminate.vector <- rep(every.ith, ceiling((number.iterations) / length(every.ith)))[1:number.iterations]
-
+  eliminate.vector <- 
+    rep(every.ith, 
+        ceiling((number.iterations) / length(every.ith)))[1:number.iterations]
+  
   x.t <- x.t[eliminate.vector == 1, ]
-
+  
   # Indictor for the acceptance rate.
   for (i in 1:(length(x.t[, 1]) - 1)) {
     if (x.t[i, 5] != x.t[i + 1, 5]) {
       x.t[i + 1, 4] <- 1
     }
   }
-
+  
   x.t[, 5:(4 + length(beta))] <- x.t[, 5:(4 + length(beta))] + min.X
-
+  
   return(x.t)
 }
 
@@ -281,15 +296,15 @@ MCMC.chain <- function(X, beta, g, s, i, p1, p2, lambda1, lambda2, sd.g, sd.s, s
 CI.short.fast <- function(chain, confidence.level) {
   chain.length <- length(chain)
   chain <- sort(chain)
-
+  
   num.short.int <- min(chain.length * (1 - confidence.level) + 1, chain.length)
   length.short.int <- rep(0, num.short.int)
-
+  
   length.short.int <- chain[(chain.length - num.short.int + 1):chain.length] - chain[1:num.short.int]
   index <- rank(length.short.int)
   index <- (index == min(index)) * 1:num.short.int
   lower.ix <- floor(median(index[index != 0]))
   shortest.int <- c(lower = chain[lower.ix], upper = chain[chain.length - num.short.int + lower.ix])
-
+  
   return(shortest.int)
 }
