@@ -8,7 +8,7 @@
 
 /* construct vector {0, 1, ..., n-1} ---------------------------------------- */
 template <class T>
-std::vector<T> zero2n(T n) {
+std::vector<T> integers_n(T n) {
   std::vector<T> out(n);
   for(T i = 0; i < n; i++) {
     out[i] = i;
@@ -16,15 +16,31 @@ std::vector<T> zero2n(T n) {
   return out;
 }
 
-/* sample with repla {0, 1, ..., n-1} ---------------------------------------- */
-const std::vector<size_t> sample_int(const size_t n,
+/* take k first elements of a vector ---------------------------------------- */
+template <class T>
+std::vector<T> takeFirsts(const std::vector<T>& v, size_t k) {
+  auto first = v.begin();
+  auto last = v.begin() + k + 1;
+  std::vector<T> out(first, last);
+  return out;
+}
+
+/* shuffle {0, 1, ..., n-1} ------------------------------------------------- */
+const std::vector<size_t> shuffle_n(const size_t n,
                                      std::default_random_engine& generator) {
-  std::vector<size_t> elems = zero2n(n);
+  std::vector<size_t> elems = integers_n(n);
   std::shuffle(elems.begin(), elems.end(), generator);
   return elems;
 }
 
+/* sample k integers among {0, 1, ..., n-1} --------------------------------- */
+const std::vector<size_t> sample_int(const size_t n, const size_t k, 
+                                    std::default_random_engine& generator) {
+  return takeFirsts(shuffle_n(n, generator), k);
+}
 
+
+/* Beta-quantiles for a vector `beta` --------------------------------------- */
 Rcpp::NumericVector BetaQuantile(
   double g, double s, double a, double prob, Rcpp::NumericVector beta
 ){
