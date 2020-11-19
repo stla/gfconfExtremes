@@ -148,7 +148,7 @@ std::vector<double> MCMCnewpoint(const double g,
 
   std::default_random_engine generator(seed);
 
-  double MHratio;
+  double MHratio, g_star, s_star;
 
   double a = X[i];
   int i_star;
@@ -177,15 +177,24 @@ std::vector<double> MCMCnewpoint(const double g,
     }
 
     const double a_star = X[i_star];
-    const double g_star = g;
-    const double s_star = s + g * (a_star - a);
+    g_star = g;
+    s_star = s + g * (a_star - a);
     MHratio = exp(log_gpd_dens(g_star, s_star, a_star, X, Jnumb, n, generator) -
                   log_gpd_dens(g, s, a, X, Jnumb, n, generator)) *
               dens_pois / dens_pois_star;
   } else {
-    const double g_star = g + sd_g * cauchy(generator);
-    const double s_star = s + sd_s * cauchy(generator);
+    g_star = g + sd_g * cauchy(generator);
+    s_star = s + sd_s * cauchy(generator);
     MHratio = exp(log_gpd_dens(g_star, s_star, a, X, Jnumb, n, generator) -
                   log_gpd_dens(g, s, a, X, Jnumb, n, generator));
   }
+
+  std::vector<double> newpoint;  
+  if(uniform(generator) < MHratio && !std::isnan(MHratio) && !std::isinf(MHratio)){
+    newpoint = {g_star, s_star, (double)i_star, 0.0};
+  }else{
+    newpoint = {g, s, (double)i, 0.0};
+  }
+  
+  return newpoint;
 }
