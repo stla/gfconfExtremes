@@ -107,7 +107,7 @@ const double log_gpd_dens(const double g,
                           const double a,
                           Rcpp::NumericVector X,
                           const size_t Jnumb,
-                          const unsigned n,
+                          const size_t n,
                           std::default_random_engine& generator) {
   double log_density;
   X = X[X > a];
@@ -125,4 +125,67 @@ const double log_gpd_dens(const double g,
     log_density = -INFINITY;
   }
   return log_density;
+}
+
+/* distributions to be sampled ---------------------------------------------- */
+std::uniform_real_distribution<double> uniform(0.0, 1.0);
+std::cauchy_distribution<double> cauchy(0.0, 1.0);
+
+/* propose a new (gamma,sigma) value or a new index for the threshold ------- */
+std::vector<double> MCMCnewpoint(const double g,
+                                 const double s,
+                                 const int i,
+                                 const double p1,
+                                 const double p2,
+                                 double lambda,
+                                 const double sd_g,
+                                 const double sd_s,
+                                 const Rcpp::NumericVector X,
+                                 const size_t Jnumb,
+                                 const int n,
+                                 const unsigned seed) {
+  // caution with i: zero-index!
+
+  std::default_random_engine generator(seed);
+
+  double MHratio;
+
+  double a = X[i];
+  int i_star;
+
+  if(uniform(generator) > p1) {
+    int plus_minus = n;
+    double dens_pois_star, dens_pois;
+
+    if(uniform(generator) < p2) {
+      std::poisson_distribution<int> poisson(lambda);
+      while(plus_minus > n - i - 10) {
+        plus_minus = poisson(generator);
+      }
+      i_star = i + plus_minus;
+      dens_pois_star = p2 / boost::math::gamma_p(n - i - 10, lambda);
+      dens_pois = (1.0 - p2) / boost::math::gamma_p(i_star - 1, lambda);
+    } else {
+      lambda = lambda < i ? lambda : (double)i;
+      std::poisson_distribution<int> poisson(lambda);
+      while(plus_minus > i - 1) {
+        plus_minus = poisson(generator);
+      }
+      i_star = i - plus_minus;
+      dens_pois_star = (1.0 - p2) / boost::math::gamma_p(i - 1, lambda);
+      dens_pois = p2 / boost::math::gamma_p(n - i_star - 10, lambda);
+    }
+
+    const double a_star = X[i_star];
+    const double g_star = g;
+    const double s_star = s + g * (a_star - a);
+    MHratio = exp(log_gpd_dens(g_star, s_star, a_star, X, Jnumb, n, generator) -
+                  log_gpd_dens(g, s, a, X, Jnumb, n, generator)) *
+              dens_pois / dens_pois_star;
+  } else {
+    const double g_star = g + sd_g * cauchy(generator);
+    const double s_star = s + sd_s * cauchy(generator);
+    MHratio = exp(log_gpd_dens(g_star, s_star, a, X, Jnumb, n, generator) -
+                  log_gpd_dens(g, s, a, X, Jnumb, n, generator));
+  }
 }
