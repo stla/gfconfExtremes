@@ -69,7 +69,7 @@ double Jacobian(const double g,
                 const double s,
                 const double a,
                 const size_t Jnumb,
-                const Rcpp::NumericVector& X,
+                const Rcpp::NumericVector X,
                 std::default_random_engine& generator) {
   Rcpp::NumericMatrix Xchoose3(Jnumb, 3);
   const size_t n = X.size();
@@ -78,10 +78,10 @@ double Jacobian(const double g,
     const Rcpp::NumericVector Xsub = X[indices];
     Xchoose3(i, Rcpp::_) = Xsub;
   }
-  const Rcpp::NumericMatrix Xdiff =
-      Rcpp::cbind(Xchoose3(Rcpp::_, 1) - Xchoose3(Rcpp::_, 2),
-                  Xchoose3(Rcpp::_, 2) - Xchoose3(Rcpp::_, 0),
-                  Xchoose3(Rcpp::_, 0) - Xchoose3(Rcpp::_, 1));
+  Rcpp::NumericMatrix Xdiff(Jnumb, 3);
+  Xdiff(Rcpp::_, 0) = Xchoose3(Rcpp::_, 1) - Xchoose3(Rcpp::_, 2);
+  Xdiff(Rcpp::_, 1) = Xchoose3(Rcpp::_, 2) - Xchoose3(Rcpp::_, 0);
+  Xdiff(Rcpp::_, 2) = Xchoose3(Rcpp::_, 0) - Xchoose3(Rcpp::_, 1);
   double Jmean;
   if(g == 0.0) {
     Rcpp::NumericVector Jvec(Jnumb);
