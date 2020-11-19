@@ -42,7 +42,7 @@ const std::vector<size_t> sample_int(const size_t n, const size_t k,
 
 /* Beta-quantiles for a vector `beta` --------------------------------------- */
 Rcpp::NumericVector BetaQuantile(
-  double g, double s, double a, double prob, Rcpp::NumericVector beta
+  const double g, const double s, const double a, const double prob, const Rcpp::NumericVector& beta
 ){
   Rcpp::NumericVector alpha = (1.0 - beta) / prob;
   Rcpp::NumericVector Q;
@@ -54,3 +54,22 @@ Rcpp::NumericVector BetaQuantile(
   return Q;
 }
 
+/* Calculates the Jacobian -------------------------------------------------- */
+double Jacobian(const double g, const double s, const double a, const size_t Jnumb, 
+                const Rcpp::NumericVector& X, std::default_random_engine& generator){
+  Rcpp::NumericMatrix Xchoose3(Jnumb, 3);
+  const size_t n = X.size();
+  for(size_t i = 0; i < Jnumb; i++){
+    const Rcpp::IntegerVector indices = Rcpp::wrap(sample_int(n, 3, generator));
+    const Rcpp::NumericVector Xsub = X[indices];
+    Xchoose3(i, Rcpp::_) = Xsub;
+  }
+  Rcpp::NumericMatrix Xdiff, Jmat;
+  double Jmean;
+  if(g == 0.0) {
+    
+  }else{
+    
+  }
+  return Jmean;
+}
