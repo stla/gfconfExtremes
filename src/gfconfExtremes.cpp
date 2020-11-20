@@ -125,7 +125,7 @@ const double log_gpd_dens(const double g,
   const double Min = Rcpp::min(X - a);
   if(s > 0 && g > (-s / Max) && Min > 0.0 && a > 0.0 && g > -0.5) {
     const double J = Jacobian(g, s, a, Jnumb, X, generator);
-    Rcpp::Rcout << "J: " << J << "\n";
+    // Rcpp::Rcout << "J: " << J << "\n";
     
     if(g == 0.0) {
       log_density = -1 / s * Rcpp::sum(X - a) + log(J) - n * log(s + a);
@@ -136,7 +136,7 @@ const double log_gpd_dens(const double g,
   } else {
     log_density = -INFINITY;
   }
-  Rcpp::Rcout << "logdens: " << log_density << "\n";
+  // Rcpp::Rcout << "logdens: " << log_density << "\n";
   
   return log_density;
 }
@@ -164,14 +164,14 @@ std::vector<double> MCMCnewpoint(const double g,
 
   double MHratio, g_star, s_star;
   
-//  Rcpp::Rcout << "i: " << i_dbl << "\n";
+//  // Rcpp::Rcout << "i: " << i_dbl << "\n";
 
   const int i = (int)(i_dbl+0.5);
   double a = X(i-1);
   int i_star;
 
   if(uniform(generator) > p1) {
-    Rcpp::Rcout << "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n";
+    // Rcpp::Rcout << "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n";
     int plus_minus = n;
     double dens_pois_star, dens_pois;
 
@@ -201,20 +201,21 @@ std::vector<double> MCMCnewpoint(const double g,
                   log_gpd_dens(g, s, a, X, Jnumb, n, generator)) *
               dens_pois / dens_pois_star;
   } else {
-    Rcpp::Rcout << "XXXXXX - " << "p1: " << p1 << "\n";
+    // Rcpp::Rcout << "XXXXXX - " << "p1: " << p1 << "\n";
     g_star = g + sd_g * cauchy(generator);
     s_star = s + sd_s * cauchy(generator);
-    Rcpp::Rcout << "gstar" << g_star << "\n";
+    i_star = i;
+    // Rcpp::Rcout << "gstar" << g_star << "\n";
     
     MHratio = exp(log_gpd_dens(g_star, s_star, a, X, Jnumb, n, generator) -
                   log_gpd_dens(g, s, a, X, Jnumb, n, generator));
   }
 
-  Rcpp::Rcout << "ratio: " << MHratio << "\n";
+  // Rcpp::Rcout << "ratio: " << MHratio << "\n";
   
   std::vector<double> newpoint;
-  if(uniform(generator) < MHratio && !std::isnan(MHratio) &&
-     !std::isinf(MHratio)) {
+  if(!std::isnan(MHratio) &&
+     !std::isinf(MHratio) && uniform(generator) < MHratio) {
     newpoint = {g_star, s_star, (double)i_star};
   } else {
     newpoint = {g, s, (double)i};

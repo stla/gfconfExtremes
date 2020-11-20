@@ -308,3 +308,8 @@ CI.short.fast <- function(chain, confidence.level) {
   
   return(shortest.int)
 }
+
+
+Fiducial.GPD.unknown.thresh(
+  rgamma(10, 10, 1), 0.95, chain.length = 30, burnin = 20
+)
