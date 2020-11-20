@@ -82,7 +82,8 @@ double Jacobian(const double g,
   Rcpp::NumericMatrix Xchoose3(Jnumb, 3);
   const size_t n = X.size();
   for(size_t i = 0; i < Jnumb; i++) {
-    const Rcpp::IntegerVector indices = Rcpp::wrap(sample_int(n, 3, generator));
+    const std::vector<size_t> indices0 = sample_int(n, 3, generator);
+    const Rcpp::IntegerVector indices(indices0.begin(), indices0.end());
     const Rcpp::NumericVector Xsub = X[indices];
     Xchoose3(i, Rcpp::_) = Xsub;
   }
@@ -124,6 +125,8 @@ const double log_gpd_dens(const double g,
   const double Min = Rcpp::min(X - a);
   if(s > 0 && g > (-s / Max) && Min > 0.0 && a > 0.0 && g > -0.5) {
     const double J = Jacobian(g, s, a, Jnumb, X, generator);
+    Rcpp::Rcout << "J: " << J << "\n";
+    
     if(g == 0.0) {
       log_density = -1 / s * Rcpp::sum(X - a) + log(J) - n * log(s + a);
     } else {
@@ -133,6 +136,8 @@ const double log_gpd_dens(const double g,
   } else {
     log_density = -INFINITY;
   }
+  Rcpp::Rcout << "logdens: " << log_density << "\n";
+  
   return log_density;
 }
 
@@ -152,18 +157,21 @@ std::vector<double> MCMCnewpoint(const double g,
                                  const Rcpp::NumericVector X,
                                  const size_t Jnumb,
                                  const int n,
-                                 std::default_random_engine generator,
+                                 std::default_random_engine& generator,
                                  std::poisson_distribution<int> poisson1,
                                  std::poisson_distribution<int> poisson2) {
   // caution with i: zero-index!
 
   double MHratio, g_star, s_star;
+  
+//  Rcpp::Rcout << "i: " << i_dbl << "\n";
 
-  const int i = (int)i_dbl;
-  double a = X(i);
+  const int i = (int)(i_dbl+0.5);
+  double a = X(i-1);
   int i_star;
 
   if(uniform(generator) > p1) {
+    Rcpp::Rcout << "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n";
     int plus_minus = n;
     double dens_pois_star, dens_pois;
 
@@ -173,8 +181,8 @@ std::vector<double> MCMCnewpoint(const double g,
         plus_minus = poisson1(generator);
       }
       i_star = i + plus_minus;
-      dens_pois_star = p2 / boost::math::gamma_p(n - i - 10, lambda);
-      dens_pois = (1.0 - p2) / boost::math::gamma_p(i_star - 1, lambda);
+      dens_pois_star = p2 / boost::math::gamma_p(lambda, n - i - 10);
+      dens_pois = (1.0 - p2) / boost::math::gamma_p(lambda, i_star - 1);
     } else {
       lambda = lambda < i_dbl ? lambda : i_dbl;
       // std::poisson_distribution<int> poisson(lambda);
@@ -182,23 +190,28 @@ std::vector<double> MCMCnewpoint(const double g,
         plus_minus = poisson2(generator);
       }
       i_star = i - plus_minus;
-      dens_pois_star = (1.0 - p2) / boost::math::gamma_p(i - 1, lambda);
-      dens_pois = p2 / boost::math::gamma_p(n - i_star - 10, lambda);
+      dens_pois_star = (1.0 - p2) / boost::math::gamma_p(lambda, i - 1);
+      dens_pois = p2 / boost::math::gamma_p(lambda, n - i_star - 10);
     }
 
-    const double a_star = X[i_star];
+    const double a_star = X(i_star-1);
     g_star = g;
     s_star = s + g * (a_star - a);
     MHratio = exp(log_gpd_dens(g_star, s_star, a_star, X, Jnumb, n, generator) -
                   log_gpd_dens(g, s, a, X, Jnumb, n, generator)) *
               dens_pois / dens_pois_star;
   } else {
+    Rcpp::Rcout << "XXXXXX - " << "p1: " << p1 << "\n";
     g_star = g + sd_g * cauchy(generator);
     s_star = s + sd_s * cauchy(generator);
+    Rcpp::Rcout << "gstar" << g_star << "\n";
+    
     MHratio = exp(log_gpd_dens(g_star, s_star, a, X, Jnumb, n, generator) -
                   log_gpd_dens(g, s, a, X, Jnumb, n, generator));
   }
 
+  Rcpp::Rcout << "ratio: " << MHratio << "\n";
+  
   std::vector<double> newpoint;
   if(uniform(generator) < MHratio && !std::isnan(MHratio) &&
      !std::isinf(MHratio)) {
@@ -228,6 +241,7 @@ Rcpp::NumericVector concat(const double g,
 }
 
 /* function that runs the MCMC chain ---------------------------------------- */
+// [[Rcpp::export]]
 Rcpp::NumericMatrix MCMCchain(Rcpp::NumericVector X,
                               const Rcpp::NumericVector beta,
                               const double g,
@@ -255,7 +269,7 @@ Rcpp::NumericMatrix MCMCchain(Rcpp::NumericVector X,
   Rcpp::NumericMatrix xt(niter, 4 + lbeta);
   xt(0, Rcpp::_) =
       concat(g, s, i_dbl,  // caution with X(i) !!
-             BetaQuantile(g, s, X(i), 1.0 - i_dbl / n, beta), lbeta);
+             BetaQuantile(g, s, X(i-1), 1.0 - i_dbl / n, beta), lbeta);
 
   std::poisson_distribution<int> poisson1(lambda1);
   std::poisson_distribution<int> poisson2(lambda2);
@@ -269,34 +283,37 @@ Rcpp::NumericMatrix MCMCchain(Rcpp::NumericVector X,
     std::vector<double> gsi;
     if(lambda < i_dbl) {
       if(b) {
-        gsi = MCMCnewpoint(xt(j, 1), xt(j, 2), xt(j, 3), p1, p2, lambda, sd_g,
+        gsi = MCMCnewpoint(xt(j, 0), xt(j, 1), xt(j, 2), p1, p2, lambda, sd_g,
                            sd_s, X, Jnumb, n, generator, poisson2, poisson2);
       } else {
-        gsi = MCMCnewpoint(xt(j, 1), xt(j, 2), xt(j, 3), p1, p2, lambda, sd_g,
+        gsi = MCMCnewpoint(xt(j, 0), xt(j, 1), xt(j, 2), p1, p2, lambda, sd_g,
                            sd_s, X, Jnumb, n, generator, poisson1, poisson1);
       }
     } else {
       if(b) {
-        gsi = MCMCnewpoint(xt(j, 1), xt(j, 2), xt(j, 3), p1, p2, lambda, sd_g,
+        gsi = MCMCnewpoint(xt(j, 0), xt(j, 1), xt(j, 2), p1, p2, lambda, sd_g,
                            sd_s, X, Jnumb, n, generator, poisson2, poisson3);
       } else {
-        gsi = MCMCnewpoint(xt(j, 1), xt(j, 2), xt(j, 3), p1, p2, lambda, sd_g,
+        gsi = MCMCnewpoint(xt(j, 0), xt(j, 1), xt(j, 2), p1, p2, lambda, sd_g,
                            sd_s, X, Jnumb, n, generator, poisson1, poisson3);
       }
     }
     xt(j + 1, Rcpp::_) = concat(
         gsi[0], gsi[1], gsi[2],  // caution with X(i) !!
-        BetaQuantile(gsi[0], gsi[1], X(int(gsi[2])), 1.0 - gsi[2] / n, beta),
+        BetaQuantile(gsi[0], gsi[1], X(int(gsi[2]+0.5)-1), 1.0 - gsi[2] / n, beta),
         lbeta);
   }
   
   xt = xt(Rcpp::Range(nburnin, niter-1), Rcpp::_);
-  
+
+  return xt;
+  /*  
   niter = xt.nrow();
   Rcpp::IntegerVector every_ith = Rcpp::rep(0, nskip+1);
   every_ith(0) = 1;
   Rcpp::IntegerVector eliminate = 
     Rcpp::rep(every_ith, (int)ceil((double)niter / (nskip+1)));
   eliminate = eliminate[Rcpp::Range(0,niter)];
-  xt = xt[eliminate == 1];
+  xt = xt[eliminate, Rcpp::_];
+  */
 }
