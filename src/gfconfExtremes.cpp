@@ -151,8 +151,8 @@ const double log_gpd_dens(const double g,
   X = X[X > a];
   // Rcpp::Rcout << "X[X > a]: " << X.size() << "\n";
   const double Max = Rcpp::max(X - a);
-  const double Min = Rcpp::min(X - a);
-  if(s > 0 && g > (-s / Max) && Min > 0.0 && a > 0.0 && g > -0.5) {
+  //const double Min = Rcpp::min(X - a); condition '&& Min > 0.0' is always true
+  if(s > 0 && g > (-s / Max) && a > 0.0 && g > -0.5) {
     const double J = Jacobian(g, s, a, Jnumb, X, generator);
     // Rcpp::Rcout << "J: " << J << "\n";
 
@@ -266,7 +266,7 @@ Rcpp::NumericVector concat(const double g,
   out(0) = g;
   out(1) = s;
   out(2) = i;
-  out(3) = 0.0;
+  out(3) = 0.0; // this column is always, it is always 0
   for(size_t k = 4; k < 4 + lbeta; k++) {
     out(k) = beta(k - 4);
   }
@@ -288,7 +288,7 @@ Rcpp::NumericMatrix MCMCchain(Rcpp::NumericVector X,
                               const double sd_s,
                               const unsigned nskip, // not used here
                               size_t niter,
-                              const size_t nburnin, // not used here
+                              const size_t nburnin, // almost not used here
                               const size_t Jnumb,
                               const unsigned seed) {
 
@@ -335,7 +335,7 @@ Rcpp::NumericMatrix MCMCchain(Rcpp::NumericVector X,
     }
     xt(j + 1, Rcpp::_) =
         concat(gsi[0], gsi[1], gsi[2],  // caution with X(i) !!
-               BetaQuantile(gsi[0], gsi[1], X(int(gsi[2] + 0.5) - 1),
+               BetaQuantile(gsi[0], gsi[1], X((int)(gsi[2] + 0.5) - 1),
                             1.0 - gsi[2] / n, beta),
                lbeta);
   }

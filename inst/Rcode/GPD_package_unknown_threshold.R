@@ -48,11 +48,13 @@ Fiducial.GPD.unknown.thresh <- function(
     X, beta, g, s, i, p1, p2, lambda1, lambda2, sd.g, sd.s, skip.number,
     number.iterations, burnin, J.numb
   )
+ 
+  return(chain.output)
   
   chain <- chain.output[, 1:3]
   acceptance.rate <- mean(chain.output[, 4])
   cat("acceptance rate: ", acceptance.rate)
-  #stop()
+  stop()
   # estimated threshold
   median.index <- median(chain.output[, 3])
   
@@ -312,6 +314,13 @@ CI.short.fast <- function(chain, confidence.level) {
 
 
 data(rain)
-cis <- Fiducial.GPD.unknown.thresh(
-  rain, 0.5, 0.95, chain.length = 2000, burnin = 200
+set.seed(666)
+X <- rgamma(10000, shape = 4, scale = 1)  #rain#rgamma(1000, 1, 1)
+
+xt <- Fiducial.GPD.unknown.thresh(
+  X, c(0.25,0.5,0.75), 0.95, chain.length = 10000, burnin = 2000
 )
+
+coda <- as.mcmc(xt)
+summary(coda)
+qgamma(c(0.25,0.5,0.75),4)

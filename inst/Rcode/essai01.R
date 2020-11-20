@@ -1,4 +1,5 @@
-#library(ismev)
+library(ismev)
+library(coda)
 
 ######## This is the actual function to run for the package############
 
@@ -33,9 +34,9 @@ test <- function(
   if (i == "NaN") i <- floor(n * .85)
   
   if(is.nan(g) || is.nan(s)){
-    #mle.fit <- gpd.fit(X, X[i], show = FALSE)
-    if (is.nan(g)) g <- 0.036#mle.fit$mle[2L]
-    if (is.nan(s)) s <- 0.94#mle.fit$mle[1L]
+    mle.fit <- gpd.fit(X, X[i], show = FALSE)
+    if (is.nan(g)) g <- mle.fit$mle[2L]
+    if (is.nan(s)) s <- mle.fit$mle[1L]
   }
   
   if (sd.g == "NaN") sd.g <- 2 * abs(g) / 3
@@ -81,7 +82,15 @@ test <- function(
 
 data("rain")
 set.seed(666)
-X <- rgamma(1000, 1, 1)
-xt <- test(X, 0.5, chain.length = 50, burnin = 5)
+U <- runif(50000,0,10)
+P <- 10 + 1*(runif(50000)^(-0.5)-1)/0.5#Pareto::rPareto(10000, 10, 1)  #rain#rgamma(1000, 1, 1)
+X <- numeric(50000)
+for(i in 1:50000){
+  X[i] <- sample(c(U[i],P[i]),1)
+}
+xt <- test(X, c(0.25,0.5,0.75), chain.length = 4000, burnin = 2000)
 #str(X)
 
+coda <- as.mcmc(xt)
+summary(coda)
+Pareto::qPareto(c(0.25,0.5,0.75), 10, 1)
