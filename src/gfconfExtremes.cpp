@@ -40,6 +40,7 @@ const std::vector<size_t> sample_int(const size_t n,
   return takeFirsts(shuffle_n(n, generator), k);
 }
 
+/* product of vector elements ----------------------------------------------- */
 const double product(const Rcpp::NumericVector v) {
   double out = 1.0;
   for(auto i = 0; i < v.size(); i++) {
@@ -48,12 +49,19 @@ const double product(const Rcpp::NumericVector v) {
   return out;
 }
 
+/* sorts vector ------------------------------------------------------------- */
+Rcpp::NumericVector stl_sort(const Rcpp::NumericVector x) {
+  Rcpp::NumericVector y = clone(x);
+ std::sort(y.begin(), y.end());
+ return y;
+}
+ 
 /* Beta-quantiles for a vector `beta` --------------------------------------- */
 Rcpp::NumericVector BetaQuantile(const double g,
                                  const double s,
                                  const double a,
                                  const double prob,
-                                 const Rcpp::NumericVector& beta) {
+                                 const Rcpp::NumericVector beta) {
   Rcpp::NumericVector alpha = (1.0 - beta) / prob;
   Rcpp::NumericVector Q;
   if(g == 0.0) {
@@ -102,6 +110,7 @@ double Jacobian(const double g,
   return Jmean;
 }
 
+/* XXX - */
 const double log_gpd_dens(const double g,
                           const double s,
                           const double a,
@@ -189,12 +198,45 @@ std::vector<double> MCMCnewpoint(const double g,
                   log_gpd_dens(g, s, a, X, Jnumb, n, generator));
   }
 
-  std::vector<double> newpoint;  
-  if(uniform(generator) < MHratio && !std::isnan(MHratio) && !std::isinf(MHratio)){
-    newpoint = {g_star, s_star, (double)i_star, 0.0};
-  }else{
-    newpoint = {g, s, (double)i, 0.0};
+  std::vector<double> newpoint;
+  if(uniform(generator) < MHratio && !std::isnan(MHratio) &&
+     !std::isinf(MHratio)) {
+    newpoint = {g_star, s_star, (double)i_star};
+  } else {
+    newpoint = {g, s, (double)i};
   }
-  
+
   return newpoint;
 }
+
+/* helper function for MCMCchain -------------------------------------------- */
+Rcpp::NumericVector concat(const double g, const double s, const double i, 
+                           const Rcpp::NumericVector beta, const size_t lbeta){
+  Rcpp::NumericVector out(4 + lbeta);
+  out(0) = g; out(1) = s; out(2) = i; out(3) = 0.0;
+  for(size_t k = 4; k < 4 + lbeta; k++){
+    out(k) = beta(k-4);
+  }
+  return out;
+}
+
+/* function that runs the MCMC chain ---------------------------------------- */
+Rcpp::NumericMatrix MCMCchain(
+  Rcpp::NumericVector X, const Rcpp::NumericVector beta, 
+  const double g, const double s, const int i, 
+  const double p1, const double p2,
+  const double lambda1, const double lambda2,
+  const double sd_g, const double sd_s,
+  const unsigned nskip, const unsigned niter, const unsigned nburnin,
+  const size_t Jnumb
+){
+  X = stl_sort(X);
+  X = X - X(0);
+  size_t lbeta = beta.size();
+  
+  Rcpp::NumericMatrix xt(niter, 4 + beta.size());
+  xt(0, Rcpp::_) = concat(g, s, (double)i, // caution with X(i) !!
+     BetaQuantile(g, s, X(i), 1.0 - (double)i/X.size(), beta), lbeta);
+  
+}
+
