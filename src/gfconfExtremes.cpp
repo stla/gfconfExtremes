@@ -143,7 +143,7 @@ std::cauchy_distribution<double> cauchy(0.0, 1.0);
 /* propose a new (gamma,sigma) value or a new index for the threshold ------- */
 std::vector<double> MCMCnewpoint(const double g,
                                  const double s,
-                                 const int i,
+                                 const double i_dbl,
                                  const double p1,
                                  const double p2,
                                  double lambda,
@@ -152,14 +152,15 @@ std::vector<double> MCMCnewpoint(const double g,
                                  const Rcpp::NumericVector X,
                                  const size_t Jnumb,
                                  const int n,
-                                 const unsigned seed) {
+                                 std::default_random_engine generator,
+                                 std::poisson_distribution<int> poisson1,
+                                 std::poisson_distribution<int> poisson2) {
   // caution with i: zero-index!
-
-  std::default_random_engine generator(seed);
 
   double MHratio, g_star, s_star;
 
-  double a = X[i];
+  const int i = (int)i_dbl;
+  double a = X(i);
   int i_star;
 
   if(uniform(generator) > p1) {
@@ -167,18 +168,18 @@ std::vector<double> MCMCnewpoint(const double g,
     double dens_pois_star, dens_pois;
 
     if(uniform(generator) < p2) {
-      std::poisson_distribution<int> poisson(lambda);
+      //std::poisson_distribution<int> poisson(lambda);
       while(plus_minus > n - i - 10) {
-        plus_minus = poisson(generator);
+        plus_minus = poisson1(generator);
       }
       i_star = i + plus_minus;
       dens_pois_star = p2 / boost::math::gamma_p(n - i - 10, lambda);
       dens_pois = (1.0 - p2) / boost::math::gamma_p(i_star - 1, lambda);
     } else {
-      lambda = lambda < i ? lambda : (double)i;
-      std::poisson_distribution<int> poisson(lambda);
+      lambda = lambda < i_dbl ? lambda : i_dbl;
+      //std::poisson_distribution<int> poisson(lambda);
       while(plus_minus > i - 1) {
-        plus_minus = poisson(generator);
+        plus_minus = poisson2(generator);
       }
       i_star = i - plus_minus;
       dens_pois_star = (1.0 - p2) / boost::math::gamma_p(i - 1, lambda);
@@ -227,16 +228,59 @@ Rcpp::NumericMatrix MCMCchain(
   const double p1, const double p2,
   const double lambda1, const double lambda2,
   const double sd_g, const double sd_s,
-  const unsigned nskip, const unsigned niter, const unsigned nburnin,
-  const size_t Jnumb
+  const unsigned nskip, const size_t niter, const unsigned nburnin,
+  const size_t Jnumb, 
+  const unsigned seed
 ){
+  
+  std::default_random_engine generator(seed);
+  
   X = stl_sort(X);
   X = X - X(0);
-  size_t lbeta = beta.size();
+  const size_t lbeta = beta.size();
+  const double i_dbl = (double)i;
+  const int n = X.size();
   
-  Rcpp::NumericMatrix xt(niter, 4 + beta.size());
-  xt(0, Rcpp::_) = concat(g, s, (double)i, // caution with X(i) !!
-     BetaQuantile(g, s, X(i), 1.0 - (double)i/X.size(), beta), lbeta);
+  Rcpp::NumericMatrix xt(niter, 4 + lbeta);
+  xt(0, Rcpp::_) = concat(g, s, i_dbl, // caution with X(i) !!
+     BetaQuantile(g, s, X(i), 1.0 - i_dbl/n, beta), lbeta);
+  
+  std::poisson_distribution<int> poisson1(lambda1);
+  std::poisson_distribution<int> poisson2(lambda2);
+  std::poisson_distribution<int> poisson3(i_dbl);
+  
+  double lambda;
+  
+  for(size_t j = 0; j < niter - 1; j++){
+    bool b = j % 10 == 0;
+    lambda = b ? lambda2 : lambda1;
+    std::vector<double> gsi;
+    if(lambda < i_dbl){
+      if(b) {
+        gsi = MCMCnewpoint(
+          xt(j,1), xt(j,2), xt(j,3), p1, p2, lambda, sd_g, sd_s, X, Jnumb, n, 
+          generator, poisson2, poisson2
+        );
+      }else {
+        gsi = MCMCnewpoint(
+          xt(j,1), xt(j,2), xt(j,3), p1, p2, lambda, sd_g, sd_s, X, Jnumb, n, 
+          generator, poisson1, poisson1
+        );
+      }
+    }else{
+      if(b) {
+        gsi = MCMCnewpoint(
+          xt(j,1), xt(j,2), xt(j,3), p1, p2, lambda, sd_g, sd_s, X, Jnumb, n, 
+          generator, poisson2, poisson3
+        );
+      }else {
+        gsi = MCMCnewpoint(
+          xt(j,1), xt(j,2), xt(j,3), p1, p2, lambda, sd_g, sd_s, X, Jnumb, n, 
+          generator, poisson1, poisson3
+        );
+      }
+    }
+  }
   
 }
 
