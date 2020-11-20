@@ -52,10 +52,10 @@ const double product(const Rcpp::NumericVector v) {
 /* sorts vector ------------------------------------------------------------- */
 Rcpp::NumericVector stl_sort(const Rcpp::NumericVector x) {
   Rcpp::NumericVector y = clone(x);
- std::sort(y.begin(), y.end());
- return y;
+  std::sort(y.begin(), y.end());
+  return y;
 }
- 
+
 /* Beta-quantiles for a vector `beta` --------------------------------------- */
 Rcpp::NumericVector BetaQuantile(const double g,
                                  const double s,
@@ -168,7 +168,7 @@ std::vector<double> MCMCnewpoint(const double g,
     double dens_pois_star, dens_pois;
 
     if(uniform(generator) < p2) {
-      //std::poisson_distribution<int> poisson(lambda);
+      // std::poisson_distribution<int> poisson(lambda);
       while(plus_minus > n - i - 10) {
         plus_minus = poisson1(generator);
       }
@@ -177,7 +177,7 @@ std::vector<double> MCMCnewpoint(const double g,
       dens_pois = (1.0 - p2) / boost::math::gamma_p(i_star - 1, lambda);
     } else {
       lambda = lambda < i_dbl ? lambda : i_dbl;
-      //std::poisson_distribution<int> poisson(lambda);
+      // std::poisson_distribution<int> poisson(lambda);
       while(plus_minus > i - 1) {
         plus_minus = poisson2(generator);
       }
@@ -211,76 +211,92 @@ std::vector<double> MCMCnewpoint(const double g,
 }
 
 /* helper function for MCMCchain -------------------------------------------- */
-Rcpp::NumericVector concat(const double g, const double s, const double i, 
-                           const Rcpp::NumericVector beta, const size_t lbeta){
+Rcpp::NumericVector concat(const double g,
+                           const double s,
+                           const double i,
+                           const Rcpp::NumericVector beta,
+                           const size_t lbeta) {
   Rcpp::NumericVector out(4 + lbeta);
-  out(0) = g; out(1) = s; out(2) = i; out(3) = 0.0;
-  for(size_t k = 4; k < 4 + lbeta; k++){
-    out(k) = beta(k-4);
+  out(0) = g;
+  out(1) = s;
+  out(2) = i;
+  out(3) = 0.0;
+  for(size_t k = 4; k < 4 + lbeta; k++) {
+    out(k) = beta(k - 4);
   }
   return out;
 }
 
 /* function that runs the MCMC chain ---------------------------------------- */
-Rcpp::NumericMatrix MCMCchain(
-  Rcpp::NumericVector X, const Rcpp::NumericVector beta, 
-  const double g, const double s, const int i, 
-  const double p1, const double p2,
-  const double lambda1, const double lambda2,
-  const double sd_g, const double sd_s,
-  const unsigned nskip, const size_t niter, const unsigned nburnin,
-  const size_t Jnumb, 
-  const unsigned seed
-){
-  
+Rcpp::NumericMatrix MCMCchain(Rcpp::NumericVector X,
+                              const Rcpp::NumericVector beta,
+                              const double g,
+                              const double s,
+                              const int i,
+                              const double p1,
+                              const double p2,
+                              const double lambda1,
+                              const double lambda2,
+                              const double sd_g,
+                              const double sd_s,
+                              const unsigned nskip,
+                              size_t niter,
+                              const size_t nburnin,
+                              const size_t Jnumb,
+                              const unsigned seed) {
   std::default_random_engine generator(seed);
-  
+
   X = stl_sort(X);
   X = X - X(0);
   const size_t lbeta = beta.size();
   const double i_dbl = (double)i;
   const int n = X.size();
-  
+
   Rcpp::NumericMatrix xt(niter, 4 + lbeta);
-  xt(0, Rcpp::_) = concat(g, s, i_dbl, // caution with X(i) !!
-     BetaQuantile(g, s, X(i), 1.0 - i_dbl/n, beta), lbeta);
-  
+  xt(0, Rcpp::_) =
+      concat(g, s, i_dbl,  // caution with X(i) !!
+             BetaQuantile(g, s, X(i), 1.0 - i_dbl / n, beta), lbeta);
+
   std::poisson_distribution<int> poisson1(lambda1);
   std::poisson_distribution<int> poisson2(lambda2);
   std::poisson_distribution<int> poisson3(i_dbl);
-  
+
   double lambda;
-  
-  for(size_t j = 0; j < niter - 1; j++){
+
+  for(size_t j = 0; j < niter - 1; j++) {
     bool b = j % 10 == 0;
     lambda = b ? lambda2 : lambda1;
     std::vector<double> gsi;
-    if(lambda < i_dbl){
+    if(lambda < i_dbl) {
       if(b) {
-        gsi = MCMCnewpoint(
-          xt(j,1), xt(j,2), xt(j,3), p1, p2, lambda, sd_g, sd_s, X, Jnumb, n, 
-          generator, poisson2, poisson2
-        );
-      }else {
-        gsi = MCMCnewpoint(
-          xt(j,1), xt(j,2), xt(j,3), p1, p2, lambda, sd_g, sd_s, X, Jnumb, n, 
-          generator, poisson1, poisson1
-        );
+        gsi = MCMCnewpoint(xt(j, 1), xt(j, 2), xt(j, 3), p1, p2, lambda, sd_g,
+                           sd_s, X, Jnumb, n, generator, poisson2, poisson2);
+      } else {
+        gsi = MCMCnewpoint(xt(j, 1), xt(j, 2), xt(j, 3), p1, p2, lambda, sd_g,
+                           sd_s, X, Jnumb, n, generator, poisson1, poisson1);
       }
-    }else{
+    } else {
       if(b) {
-        gsi = MCMCnewpoint(
-          xt(j,1), xt(j,2), xt(j,3), p1, p2, lambda, sd_g, sd_s, X, Jnumb, n, 
-          generator, poisson2, poisson3
-        );
-      }else {
-        gsi = MCMCnewpoint(
-          xt(j,1), xt(j,2), xt(j,3), p1, p2, lambda, sd_g, sd_s, X, Jnumb, n, 
-          generator, poisson1, poisson3
-        );
+        gsi = MCMCnewpoint(xt(j, 1), xt(j, 2), xt(j, 3), p1, p2, lambda, sd_g,
+                           sd_s, X, Jnumb, n, generator, poisson2, poisson3);
+      } else {
+        gsi = MCMCnewpoint(xt(j, 1), xt(j, 2), xt(j, 3), p1, p2, lambda, sd_g,
+                           sd_s, X, Jnumb, n, generator, poisson1, poisson3);
       }
     }
+    xt(j + 1, Rcpp::_) = concat(
+        gsi[0], gsi[1], gsi[2],  // caution with X(i) !!
+        BetaQuantile(gsi[0], gsi[1], X(int(gsi[2])), 1.0 - gsi[2] / n, beta),
+        lbeta);
   }
   
+  xt = xt(Rcpp::Range(nburnin, niter-1), Rcpp::_);
+  
+  niter = xt.nrow();
+  Rcpp::IntegerVector every_ith = Rcpp::rep(0, nskip+1);
+  every_ith(0) = 1;
+  Rcpp::IntegerVector eliminate = 
+    Rcpp::rep(every_ith, (int)ceil((double)niter / (nskip+1)));
+  eliminate = eliminate[Rcpp::Range(0,niter)];
+  xt = xt[eliminate == 1];
 }
-
