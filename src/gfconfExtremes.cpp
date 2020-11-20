@@ -1,12 +1,9 @@
 #include <Rcpp.h>
 #include <boost/math/special_functions/gamma.hpp>
 #include <random>
-#ifdef _OPENMP
-#include <omp.h>
-#endif
 // [[Rcpp::depends(BH)]]
 
-/* construct vector {0, 1, ..., n-1} ---------------------------------------- */
+//~ construct vector {0, 1, ..., n-1} -------------------------------------- ~//
 template <class T>
 std::vector<T> integers_n(T n) {
   std::vector<T> out(n);
@@ -16,7 +13,8 @@ std::vector<T> integers_n(T n) {
   return out;
 }
 
-/* take k first elements of a vector ---------------------------------------- */
+/*
+//~ take k first elements of a vector -------------------------------------- ~//
 template <class T>
 std::vector<T> takeFirsts(const std::vector<T>& v, size_t k) {
   auto first = v.begin();
@@ -25,7 +23,7 @@ std::vector<T> takeFirsts(const std::vector<T>& v, size_t k) {
   return out;
 }
 
-/* shuffle {0, 1, ..., n-1} ------------------------------------------------- */
+//~ shuffle {0, 1, ..., n-1} ----------------------------------------------- ~//
 const std::vector<size_t> shuffle_n(const size_t n,
                                     std::default_random_engine& generator) {
   std::vector<size_t> elems = integers_n(n);
@@ -33,15 +31,16 @@ const std::vector<size_t> shuffle_n(const size_t n,
   return elems;
 }
 
-/* sample k integers among {0, 1, ..., n-1} --------------------------------- */
+//~ sample k integers among {0, 1, ..., n-1} ------------------------------- ~//
 const std::vector<size_t> sample_int(const size_t n,
                                      const size_t k,
                                      std::default_random_engine& generator) {
   return takeFirsts(shuffle_n(n, generator), k);
 }
+*/
 
-/* sample three integers among {0, 1, ..., n-1} ----------------------------- */
-const std::vector<int> choose3(const int n,
+//~ sample three integers among {0, 1, ..., n-1} --------------------------- ~//
+const std::vector<int> choose3(std::vector<int> elems, const int n,
                                std::default_random_engine& generator) {
   std::uniform_int_distribution<int> sampler1(0, n - 1);
   std::uniform_int_distribution<int> sampler2(0, n - 2);
@@ -49,7 +48,7 @@ const std::vector<int> choose3(const int n,
   const int i1 = sampler1(generator);
   const int i2 = sampler2(generator);
   const int i3 = sampler3(generator);
-  std::vector<int> elems = integers_n(n);
+  //std::vector<int> elems = integers_n(n); // don't do that in loop!
   elems.erase(elems.begin() + i1);
   const int j2 = elems[i2];
   elems.erase(elems.begin() + i2);
@@ -57,7 +56,7 @@ const std::vector<int> choose3(const int n,
   return {i1, j2, j3};
 }
 
-/* product of vector elements ----------------------------------------------- */
+//~ product of vector elements --------------------------------------------- ~//
 const double product(const Rcpp::NumericVector v) {
   double out = 1.0;
   for(auto i = 0; i < v.size(); i++) {
@@ -66,14 +65,14 @@ const double product(const Rcpp::NumericVector v) {
   return out;
 }
 
-/* sorts vector ------------------------------------------------------------- */
+//~ sorts vector ----------------------------------------------------------- ~//
 Rcpp::NumericVector stl_sort(const Rcpp::NumericVector x) {
   Rcpp::NumericVector y = clone(x);
   std::sort(y.begin(), y.end());
   return y;
 }
 
-/* Beta-quantiles for a vector `beta` --------------------------------------- */
+//~ Beta-quantiles for a vector `beta` ------------------------------------- ~//
 Rcpp::NumericVector BetaQuantile(const double g,
                                  const double s,
                                  const double a,
@@ -89,7 +88,7 @@ Rcpp::NumericVector BetaQuantile(const double g,
   return Q;
 }
 
-/* Calculates the Jacobian -------------------------------------------------- */
+//~ Calculates the Jacobian ------------------------------------------------ ~//
 double Jacobian(const double g,
                 const double s,
                 const double a,
@@ -97,10 +96,11 @@ double Jacobian(const double g,
                 const Rcpp::NumericVector X,
                 std::default_random_engine& generator) {
   Rcpp::NumericMatrix Xchoose3(Jnumb, 3);
-  const size_t n = X.size();
+  const int n = X.size();
+  std::vector<int> elems_n = integers_n(n);
   // // Rcpp::Rcout << "n: " << n << "\n";
   for(size_t i = 0; i < Jnumb; i++) {
-    const std::vector<int> indices = choose3(n, generator);
+    const std::vector<int> indices = choose3(elems_n, n, generator);
     //const std::vector<int> indices = {0,1,2};
     // const Rcpp::IntegerVector indices(indices0.begin(), indices0.end());
     //// Rcpp::Rcout << indices[0] << " - " << indices[1] << " - " << indices[2] << "\n";
@@ -139,7 +139,7 @@ double Jacobian(const double g,
   return Jmean;
 }
 
-/* XXX - */
+//~ XXX - ~//
 const double log_gpd_dens(const double g,
                           const double s,
                           const double a,
@@ -170,11 +170,11 @@ const double log_gpd_dens(const double g,
   return log_density;
 }
 
-/* distributions to be sampled ---------------------------------------------- */
+//~ distributions to be sampled -------------------------------------------- ~//
 std::uniform_real_distribution<double> uniform(0.0, 1.0);
 std::cauchy_distribution<double> cauchy(0.0, 1.0);
 
-/* propose a new (gamma,sigma) value or a new index for the threshold ------- */
+//~ propose a new (gamma,sigma) value or a new index for the threshold ----- ~//
 std::vector<double> MCMCnewpoint(const double g,
                                  const double s,
                                  const double i_dbl,
@@ -256,7 +256,7 @@ std::vector<double> MCMCnewpoint(const double g,
   return newpoint;
 }
 
-/* helper function for MCMCchain -------------------------------------------- */
+//~ helper function for MCMCchain ------------------------------------------ ~//
 Rcpp::NumericVector concat(const double g,
                            const double s,
                            const double i,
@@ -273,7 +273,7 @@ Rcpp::NumericVector concat(const double g,
   return out;
 }
 
-/* function that runs the MCMC chain ---------------------------------------- */
+//~ function that runs the MCMC chain -------------------------------------- ~//
 // [[Rcpp::export]]
 Rcpp::NumericMatrix MCMCchain(Rcpp::NumericVector X,
                               const Rcpp::NumericVector beta,
@@ -286,11 +286,12 @@ Rcpp::NumericMatrix MCMCchain(Rcpp::NumericVector X,
                               const double lambda2,
                               const double sd_g,
                               const double sd_s,
-                              const unsigned nskip,
+                              const unsigned nskip, // not used here
                               size_t niter,
-                              const size_t nburnin,
+                              const size_t nburnin, // not used here
                               const size_t Jnumb,
                               const unsigned seed) {
+
   std::default_random_engine generator(seed);
 
   // X = stl_sort(X); sorted in R
@@ -311,7 +312,7 @@ Rcpp::NumericMatrix MCMCchain(Rcpp::NumericVector X,
   double lambda;
 
   for(size_t j = 0; j < niter - 1; j++) {
-    // Rcpp::Rcout << j << "\n";
+
     bool b = j % 10 == 0;
     lambda = b ? lambda2 : lambda1;
     std::vector<double> gsi;
@@ -331,9 +332,6 @@ Rcpp::NumericMatrix MCMCchain(Rcpp::NumericVector X,
         gsi = MCMCnewpoint(xt(j, 0), xt(j, 1), xt(j, 2), p1, p2, lambda, sd_g,
                            sd_s, X, Jnumb, n, generator, poisson1, poisson3);
       }
-    }
-    if(j == 107){
-      // Rcpp::Rcout << "XXXXXXXXXX\n";
     }
     xt(j + 1, Rcpp::_) =
         concat(gsi[0], gsi[1], gsi[2],  // caution with X(i) !!
