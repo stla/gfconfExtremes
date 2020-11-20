@@ -181,8 +181,8 @@ std::vector<double> MCMCnewpoint(const double g,
         plus_minus = poisson1(generator);
       }
       i_star = i + plus_minus;
-      dens_pois_star = p2 / boost::math::gamma_p(lambda, n - i - 10);
-      dens_pois = (1.0 - p2) / boost::math::gamma_p(lambda, i_star - 1);
+      dens_pois_star = p2 / boost::math::gamma_q(n - i - 10, lambda);
+      dens_pois = (1.0 - p2) / boost::math::gamma_q(i_star - 1, lambda);
     } else {
       lambda = lambda < i_dbl ? lambda : i_dbl;
       // std::poisson_distribution<int> poisson(lambda);
@@ -190,8 +190,8 @@ std::vector<double> MCMCnewpoint(const double g,
         plus_minus = poisson2(generator);
       }
       i_star = i - plus_minus;
-      dens_pois_star = (1.0 - p2) / boost::math::gamma_p(lambda, i - 1);
-      dens_pois = p2 / boost::math::gamma_p(lambda, n - i_star - 10);
+      dens_pois_star = (1.0 - p2) / boost::math::gamma_q(i - 1, lambda);
+      dens_pois = p2 / boost::math::gamma_q(n - i_star - 10, lambda);
     }
 
     const double a_star = X(i_star-1);
