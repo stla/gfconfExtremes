@@ -47,6 +47,8 @@
 #' summary(gf)
 #' thresholdEstimate(gf)
 #' rejectionRate(gf)
+#' HPDinterval(gf)
+#' HPDinterval(joinMCMCchains(gf))
 gfigpd <- function(
   X, beta, threshold.init = NA, 
   gamma.init = NA, sigma.init = NA, sd.gamma = NA, sd.sigma = NA, 

@@ -84,6 +84,8 @@ gf <- gfigpd(X, beta = c(0.98, 0.99), iter = 3000L)
 summary(gf)
 thresholdEstimate(gf)
 rejectionRate(gf)
+HPDinterval(gf)
+HPDinterval(joinMCMCchains(gf))
 }
 \references{
 Damian V. Wandler & Jan Hannig. 

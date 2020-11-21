@@ -10,8 +10,8 @@ thresholdEstimate(gfi)
 \item{gfi}{an output of \code{\link{gfigpd}}}
 }
 \value{
-The estimated threshold
+The estimated threshold.
 }
 \description{
-Threshold estimate
+Returns the estimate of the threshold.
 }
