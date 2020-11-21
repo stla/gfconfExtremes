@@ -21,8 +21,12 @@ joinMCMCchains <- function(gfi){
   if(inherits(gfi, "mcmc.list")){
     coda::mcmc(as.matrix(gfi), start = start(gfi), thin = coda::thin(gfi))
   }else{
-    stop(
-      "Not a `mcmc.list` object."
-    )
+    if(inherits(gfi, "mcmc")){
+      gfi
+    }else{
+      stop(
+        "Not a `mcmc.list` object."
+      )
+    }
   }
 }

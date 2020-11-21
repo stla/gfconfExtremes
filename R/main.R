@@ -42,9 +42,10 @@
 #' @importFrom foreach foreach `%dopar%`
 #'
 #' @examples set.seed(666L)
-#' X <- abs(rcauchy(200L))
+#' X <- rgamma(500L, shape = 10, rate = 1)
 #' gf <- gfigpd(X, beta = c(0.98, 0.99), iter = 3000L)
 #' summary(gf)
+#' qgamma(c(0.98, 0.99), shape = 10, rate = 1)
 #' thresholdEstimate(gf)
 #' rejectionRate(gf)
 #' HPDinterval(gf)
