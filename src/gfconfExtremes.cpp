@@ -299,8 +299,7 @@ Rcpp::NumericMatrix MCMCchain(Rcpp::NumericVector X,
                               const double lambda2,
                               const double sd_g,
                               const double sd_s,
-                              const unsigned nskip, // not used here
-                              size_t niter,
+                              const size_t niter,
                               const size_t nburnin, // almost not used here
                               const size_t Jnumb,
                               const unsigned seed) {
