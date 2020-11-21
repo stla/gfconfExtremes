@@ -64,15 +64,16 @@ test <- function(
   print(dim(x.t))
   
   # Indictor for the acceptance rate.
+  ii <- integer(nrow(x.t))
   for (i in 1L:(nrow(x.t) - 1L)) {
-    if (x.t[i, 5L] != x.t[i + 1L, 5L]) {
-      x.t[i + 1L, 4L] <- 1
+    if (x.t[i, 4L] != x.t[i + 1L, 4L]) {
+      ii[i + 1L] <- 1L
     }
   }
   
-  x.t[, 5L:(4L + length(beta))] <- x.t[, 5L:(4L + length(beta))] + X[1L]
+  x.t[, 4L:(3L + length(beta))] <- x.t[, 4L:(3L + length(beta))] + X[1L]
   
-  acceptance.rate <- mean(x.t[, 4])
+  acceptance.rate <- mean(ii)
   cat("acceptance rate: ", acceptance.rate)
   
   

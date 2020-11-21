@@ -276,13 +276,12 @@ Rcpp::NumericVector concat(const double g,
                            const double i,
                            const Rcpp::NumericVector beta,
                            const size_t lbeta) {
-  Rcpp::NumericVector out(4 + lbeta);
+  Rcpp::NumericVector out(3 + lbeta);
   out(0) = g;
   out(1) = s;
   out(2) = i;
-  out(3) = 0.0; // this column is always, it is always 0
-  for(size_t k = 4; k < 4 + lbeta; k++) {
-    out(k) = beta(k - 4);
+  for(size_t k = 3; k < 3 + lbeta; k++) {
+    out(k) = beta(k - 3);
   }
   return out;
 }
@@ -314,7 +313,7 @@ Rcpp::NumericMatrix MCMCchain(Rcpp::NumericVector X,
   const double i_dbl = (double)i;
   const int n = X.size();
 
-  Rcpp::NumericMatrix xt(niter, 4 + lbeta);
+  Rcpp::NumericMatrix xt(niter, 3 + lbeta);
   xt(0, Rcpp::_) =
       concat(g, s, i_dbl,  // caution with X(i) !!
              BetaQuantile(g, s, X(i - 1), 1.0 - i_dbl / n, beta), lbeta);
