@@ -1,6 +1,6 @@
-#include "RcppArmadillo.h"
 #include <boost/math/special_functions/gamma.hpp>
 #include <random>
+#include "RcppArmadillo.h"
 // [[Rcpp::depends(BH)]]
 // [[Rcpp::depends(RcppArmadillo)]]
 
@@ -58,29 +58,32 @@ const std::vector<int> choose3(std::vector<int> elems, const int n,
 */
 
 //~ sample three integers among {0, 1, ..., n-1} --------------------------- ~//
-const std::array<int,3> choose3(const int n,
-                               std::default_random_engine& generator) {
+const std::array<int, 3> choose3(const int n,
+                                 std::default_random_engine& generator) {
   std::uniform_int_distribution<int> sampler1(0, n - 1);
   std::uniform_int_distribution<int> sampler2(0, n - 2);
   std::uniform_int_distribution<int> sampler3(0, n - 3);
   const int i1 = sampler1(generator);
   int i2 = sampler2(generator);
   int i3 = sampler3(generator);
-  if(i3 == i2) i3 = n - 2;
-  if(i3 == i1) i3 = n - 1;
-  if(i2 == i1) i2 = n - 1;
+  if(i3 == i2)
+    i3 = n - 2;
+  if(i3 == i1)
+    i3 = n - 1;
+  if(i2 == i1)
+    i2 = n - 1;
   return {i1, i2, i3};
 }
 
 //~ sample two integers among {0, 1, ..., n-1} ----------------------------- ~//
-const std::array<int,2> choose2(const int n,
-                                std::default_random_engine& generator) {
+const std::array<int, 2> choose2(const int n,
+                                 std::default_random_engine& generator) {
   std::uniform_int_distribution<int> sampler1(0, n - 1);
   std::uniform_int_distribution<int> sampler2(0, n - 2);
   const int i1 = sampler1(generator);
   int i2 = sampler2(generator);
   if(i2 == i1) {
-    i2 = i1 == n - 2 ? n - 1 : n - 2; 
+    i2 = i1 == n - 2 ? n - 1 : n - 2;
   }
   return {i1, i2};
 }
@@ -120,10 +123,10 @@ Rcpp::NumericVector BetaQuantile(const double g,
 }
 
 arma::vec BetaQuantileArma(const double g,
-                                 const double s,
-                                 const double a,
-                                 const double prob,
-                                 const arma::vec& beta) {
+                           const double s,
+                           const double a,
+                           const double prob,
+                           const arma::vec& beta) {
   arma::vec Q;
   if(g == 0.0) {
     Q = a - s * log((1.0 - beta) / prob);
@@ -144,14 +147,16 @@ double Jacobian(const double g,
   const int n = X.size();
   // // Rcpp::Rcout << "n: " << n << "\n";
   for(size_t i = 0; i < Jnumb; i++) {
-    const std::array<int,3> indices = choose3(n, generator);
-    //const std::vector<int> indices = {0,1,2};
+    const std::array<int, 3> indices = choose3(n, generator);
+    // const std::vector<int> indices = {0,1,2};
     // const Rcpp::IntegerVector indices(indices0.begin(), indices0.end());
-    //// Rcpp::Rcout << indices[0] << " - " << indices[1] << " - " << indices[2] << "\n";
+    //// Rcpp::Rcout << indices[0] << " - " << indices[1] << " - " << indices[2]
+    ///<< "\n";
     //  const Rcpp::NumericVector Xsub =
     //  Rcpp::NumericVector::create(X(indices(0)), X(indices(1)),
     //  X(indices(2)));
-    // // Rcpp::Rcout << Xsub[0] << " - " << Xsub[1] << " - " << Xsub[2] << "\n";
+    // // Rcpp::Rcout << Xsub[0] << " - " << Xsub[1] << " - " << Xsub[2] <<
+    // "\n";
     Xchoose3(i, Rcpp::_) = Rcpp::NumericVector::create(
         X(indices[0]), X(indices[1]), X(indices[2]));
   }
@@ -161,9 +166,9 @@ double Jacobian(const double g,
   Xdiff(Rcpp::_, 2) = Xchoose3(Rcpp::_, 0) - Xchoose3(Rcpp::_, 1);
   double Jmean;
   if(g == 0.0) {
-    const Rcpp::NumericVector Jvec = 
-      Xdiff(Rcpp::_, 0) * Xdiff(Rcpp::_, 1) * Xdiff(Rcpp::_, 2);
-    /*  
+    const Rcpp::NumericVector Jvec =
+        Xdiff(Rcpp::_, 0) * Xdiff(Rcpp::_, 1) * Xdiff(Rcpp::_, 2);
+    /*
     Rcpp::NumericVector Jvec(Jnumb);
     for(size_t i = 0; i < Jnumb; i++) {
       Jvec(i) = Xdiff(i, 0) * Xdiff(i, 1) * Xdiff(i, 2);
@@ -173,10 +178,10 @@ double Jacobian(const double g,
   } else {
     const Rcpp::NumericMatrix A = g * (Xchoose3 - a) / s;
     Rcpp::NumericVector Jmat0 = (log1p(A) * (1.0 + A) / g / g) * Xdiff;
-    const Rcpp::NumericVector Jvec = 
-      Jmat0[Rcpp::Range(0, Jnumb-1)] + 
-      Jmat0[Rcpp::Range(Jnumb, 2*Jnumb-1)] + 
-      Jmat0[Rcpp::Range(2*Jnumb, 3*Jnumb-1)];
+    const Rcpp::NumericVector Jvec =
+        Jmat0[Rcpp::Range(0, Jnumb - 1)] +
+        Jmat0[Rcpp::Range(Jnumb, 2 * Jnumb - 1)] +
+        Jmat0[Rcpp::Range(2 * Jnumb, 3 * Jnumb - 1)];
     /*
     Rcpp::NumericMatrix Jmat(Jnumb, 3);
     Jmat(Rcpp::_, 0) = Jmat0[Rcpp::Range(0, Jnumb-1)];
@@ -194,18 +199,17 @@ double Jacobian(const double g,
 }
 
 double JacobianArma(const double g,
-                const double s,
-                const double a,
-                const size_t Jnumb,
-                arma::vec& X,
-                const int n,
-                std::default_random_engine& generator) {
-
+                    const double s,
+                    const double a,
+                    const size_t Jnumb,
+                    arma::vec& X,
+                    const int n,
+                    std::default_random_engine& generator) {
   X = X - a;
   arma::mat Xchoose2(Jnumb, 2);
   if(n >= 250) {
     for(size_t i = 0; i < Jnumb; i++) {
-      const std::array<int,2> indices = choose2(n, generator);
+      const std::array<int, 2> indices = choose2(n, generator);
       const arma::rowvec2 row_i = {X.at(indices[0]), X.at(indices[1])};
       Xchoose2.row(i) = row_i;
     }
@@ -214,30 +218,32 @@ double JacobianArma(const double g,
   double Jmean;
   if(g == 0.0) {
     if(n >= 250) {
-      const arma::vec Jvec = Xchoose2.col(0) % Xchoose2.col(1) % 
-        (Xchoose2.col(0) - Xchoose2.col(1)) / (2.0 * s * s);
+      const arma::vec Jvec = Xchoose2.col(0) % Xchoose2.col(1) %
+                             (Xchoose2.col(0) - Xchoose2.col(1)) /
+                             (2.0 * s * s);
       Jmean = arma::mean(abs(Jvec));
     } else {
       const arma::mat XiXj = (X % X) * X.t();
-      //const arma::mat tXiXj = XiXj.t();
-      //const arma::mat Ones = arma::ones(n, n);
+      // const arma::mat tXiXj = XiXj.t();
+      // const arma::mat Ones = arma::ones(n, n);
       const arma::mat UpperTriOnes = arma::trimatu(arma::ones(n, n));
-      Jmean = 
-        arma::accu(abs(XiXj - XiXj.t()) * UpperTriOnes) / (s * s * n * (n-1));
+      Jmean = arma::accu(abs(XiXj - XiXj.t()) * UpperTriOnes) /
+              (s * s * n * (n - 1));
     }
   } else {
     if(n >= 250) {
-      const arma::mat A = g/s * Xchoose2; 
-      const arma::vec Jvec = 
-        (Xchoose2.col(0) % (1 + A.col(1)) % log1p(A.col(1)) - 
-        Xchoose2.col(1) % (1 + A.col(0)) % log1p(A.col(0))) / g / g;
+      const arma::mat A = g / s * Xchoose2;
+      const arma::vec Jvec =
+          (Xchoose2.col(0) % (1 + A.col(1)) % log1p(A.col(1)) -
+           Xchoose2.col(1) % (1 + A.col(0)) % log1p(A.col(0))) /
+          g / g;
       Jmean = arma::mean(abs(Jvec));
     } else {
-      const arma::vec A = g/s * X; 
+      const arma::vec A = g / s * X;
       const arma::mat XiXj = X * ((1 + A) % log1p(A)).t();
       const arma::mat UpperTriOnes = arma::trimatu(arma::ones(n, n));
-      Jmean = 
-        2 * arma::accu(abs(XiXj - XiXj.t()) * UpperTriOnes) / (g * g * n * (n-1));
+      Jmean = 2 * arma::accu(abs(XiXj - XiXj.t()) * UpperTriOnes) /
+              (g * g * n * (n - 1));
     }
   }
   return Jmean;
@@ -255,7 +261,8 @@ const double log_gpd_dens(const double g,
   X = X[X > a];
   // Rcpp::Rcout << "X[X > a]: " << X.size() << "\n";
   const double Max = Rcpp::max(X - a);
-  //const double Min = Rcpp::min(X - a); condition '&& Min > 0.0' is always true
+  // const double Min = Rcpp::min(X - a); condition '&& Min > 0.0' is always
+  // true
   if(s > 0 && g > (-s / Max) && a > 0.0 && g > -0.5) {
     const double J = Jacobian(g, s, a, Jnumb, X, generator);
     // Rcpp::Rcout << "J: " << J << "\n";
@@ -275,23 +282,23 @@ const double log_gpd_dens(const double g,
 }
 
 const double log_gpd_densArma(const double g,
-                          const double s,
-                          const double a,
-                          arma::vec& X,
-                          const size_t Jnumb,
-                          std::default_random_engine& generator) {
+                              const double s,
+                              const double a,
+                              arma::vec& X,
+                              const size_t Jnumb,
+                              std::default_random_engine& generator) {
   double log_density;
   X = X.elem(find(X > a));
   const int n = X.size();
   const double Max = arma::max(X - a);
-  
+
   if(s > 0 && g > (-s / Max)) {
     const double J = JacobianArma(g, s, a, Jnumb, X, n, generator);
 
     if(g == 0.0) {
       log_density = arma::accu(a - X) / s + log(J) - n * log(s);
     } else {
-      log_density = arma::accu((-1 / g - 1) * log1p(g * (X - a) / s)) + log(J); 
+      log_density = arma::accu((-1 / g - 1) * log1p(g * (X - a) / s)) + log(J);
     }
   } else {
     log_density = -INFINITY;
@@ -305,27 +312,27 @@ std::uniform_real_distribution<double> uniform(0.0, 1.0);
 std::cauchy_distribution<double> cauchy(0.0, 1.0);
 
 //~ propose a new (gamma,sigma) value or a new index for the threshold ----- ~//
-std::array<double,3> MCMCnewpoint(const double g,
-                                 const double s,
-                                 const double i_dbl,
-                                 const double p1,
-                                 const double p2,
-                                 double lambda,
-                                 const double sd_g,
-                                 const double sd_s,
-                                 const Rcpp::NumericVector X,
-                                 const size_t Jnumb,
-                                 const int n,
-                                 std::default_random_engine& generator,
-                                 std::poisson_distribution<int>& poisson1,
-                                 std::poisson_distribution<int>& poisson2) {
+std::array<double, 3> MCMCnewpoint(const double g,
+                                   const double s,
+                                   const double i_dbl,
+                                   const double p1,
+                                   const double p2,
+                                   double lambda,
+                                   const double sd_g,
+                                   const double sd_s,
+                                   const Rcpp::NumericVector X,
+                                   const size_t Jnumb,
+                                   const int n,
+                                   std::default_random_engine& generator,
+                                   std::poisson_distribution<int>& poisson1,
+                                   std::poisson_distribution<int>& poisson2) {
   // caution with i: zero-index!
 
   double MHratio, g_star, s_star;
 
   // Rcpp::Rcout << "i: " << i_dbl << "\n";
   // Rcpp::Rcout << "Xsize: " << X.size() << "\n";
-  
+
   const int i = (int)(i_dbl + 0.5);
   double a = X(i - 1);
   int i_star;
@@ -355,7 +362,7 @@ std::array<double,3> MCMCnewpoint(const double g,
     }
 
     // Rcpp::Rcout << "istar: " << i_star << "\n";
-    
+
     const double a_star = X(i_star - 1);
     g_star = g;
     s_star = s + g * (a_star - a);
@@ -375,7 +382,7 @@ std::array<double,3> MCMCnewpoint(const double g,
 
   // // Rcpp::Rcout << "ratio: " << MHratio << "\n";
 
-  std::array<double,3> newpoint;
+  std::array<double, 3> newpoint;
   if(!std::isnan(MHratio) && !std::isinf(MHratio) &&
      uniform(generator) < MHratio) {
     newpoint = {g_star, s_star, (double)i_star};
@@ -387,21 +394,27 @@ std::array<double,3> MCMCnewpoint(const double g,
 }
 
 arma::vec2 MCMCnewpointArma(const double g,
-                                  const double s,
-                                  const double a,
-                                  const double sd_g,
-                                  const double sd_s,
-                                  const arma::vec& X,
-                                  const size_t Jnumb,
-                                  std::default_random_engine& generator){
+                            const double s,
+                            const double a,
+                            const double sd_g,
+                            const double sd_s,
+                            arma::vec& X,
+                            const size_t Jnumb,
+                            std::default_random_engine& generator) {
   const double g_star = g + sd_g * cauchy(generator);
   const double s_star = s + sd_s * cauchy(generator);
-  const double MHratio = 
-    exp(log_gpd_densArma(g_star, s_star, a, X, Jnumb) - 
-    log_gpd_densArma(g, s, a, X, Jnumb));
-  
+  const double MHratio =
+      exp(log_gpd_densArma(g_star, s_star, a, X, Jnumb, generator) -
+          log_gpd_densArma(g, s, a, X, Jnumb, generator));
+  arma::vec2 newpoint;
+  if(!std::isnan(MHratio) && !std::isinf(MHratio) &&
+     uniform(generator) < MHratio) {
+    newpoint = {g_star, s_star};
+  } else {
+    newpoint = {g, s};
+  }
 }
-                                  
+
 //~ helper function for MCMCchain ------------------------------------------ ~//
 Rcpp::NumericVector concat(const double g,
                            const double s,
@@ -433,10 +446,9 @@ Rcpp::NumericMatrix MCMCchain(Rcpp::NumericVector X,
                               const double sd_g,
                               const double sd_s,
                               const size_t niter,
-                              const size_t nburnin, // almost not used here
+                              const size_t nburnin,  // almost not used here
                               const size_t Jnumb,
                               const unsigned seed) {
-
   std::default_random_engine generator(seed);
 
   // X = stl_sort(X); sorted in R
@@ -446,9 +458,8 @@ Rcpp::NumericMatrix MCMCchain(Rcpp::NumericVector X,
   const int n = X.size();
 
   Rcpp::NumericMatrix xt(niter, 3 + lbeta);
-  xt(0, Rcpp::_) =
-      concat(g, s, i_dbl,  // caution with X(i) !!
-             BetaQuantile(g, s, a, 1.0 - i_dbl / n, beta), lbeta);
+  xt(0, Rcpp::_) = concat(g, s, i_dbl,  // caution with X(i) !!
+                          BetaQuantile(g, s, a, 1.0 - i_dbl / n, beta), lbeta);
 
   std::poisson_distribution<int> poisson1(lambda1);
   std::poisson_distribution<int> poisson2(lambda2);
@@ -457,10 +468,9 @@ Rcpp::NumericMatrix MCMCchain(Rcpp::NumericVector X,
   double lambda;
 
   for(size_t j = 0; j < niter - 1; j++) {
-
     bool b = j % 10 == 0;
     lambda = b ? lambda2 : lambda1;
-    std::array<double,3> gsi;
+    std::array<double, 3> gsi;
     if(lambda < i_dbl) {
       if(b) {
         gsi = MCMCnewpoint(xt(j, 0), xt(j, 1), xt(j, 2), p1, p2, lambda, sd_g,
