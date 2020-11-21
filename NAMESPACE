@@ -2,4 +2,10 @@
 
 export(gfigpd)
 importFrom(Rcpp,evalCpp)
+importFrom(doParallel,registerDoParallel)
+importFrom(foreach,`%dopar%`)
+importFrom(foreach,foreach)
+importFrom(ismev,gpd.fit)
+importFrom(parallel,makeCluster)
+importFrom(parallel,stopCluster)
 useDynLib(gfconfExtremes)

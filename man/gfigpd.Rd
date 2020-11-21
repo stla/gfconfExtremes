@@ -19,7 +19,10 @@ gfigpd(
   Jnumb = 50L,
   iter = 10000L,
   burnin = 2000L,
-  thin = 6L
+  thin = 6L,
+  nchains = nthreads,
+  nthreads = parallel::detectCores(),
+  seeds = NULL
 )
 }
 \arguments{
@@ -58,6 +61,13 @@ every 10 iterations}
 
 \item{thin}{thinning number for the MCMC chain. (e.g. if it is 1 no iteration 
 is skipped)}
+
+\item{nchains}{number of MCMC chains to run}
+
+\item{nthreads}{number of threads to run the chains in parallel}
+
+\item{seeds}{the seeds used for the MCMC sampler; one seed per chain, or 
+\code{NULL} to use random seeds}
 }
 \value{
 
@@ -66,5 +76,6 @@ is skipped)}
 Title
 }
 \examples{
-xx
+data("rain", package = "ismev")
+gf <- gfigpd(rain, beta = c(0.98, 0.99))
 }
