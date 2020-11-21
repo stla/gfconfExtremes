@@ -85,9 +85,18 @@ data("rain")
 set.seed(666)
 U <- runif(50000,0,10)
 P <- 10 + 1*(runif(50000)^(-0.5)-1)/0.5#Pareto::rPareto(10000, 10, 1)  #rain#rgamma(1000, 1, 1)
+
+set.seed(666)
+a <- 10
+U <- runif(50000)
+xi <- 0.5
+P <- a + 1*(U^(-xi)-1)/xi#Pareto::rPareto(10000, 10, 1)  #rain#rgamma(1000, 1, 1)
+
+# p * 1/a = 1 - p => p = 1/(1/a+1)
+p <- 1/(1/a+1)
 X <- numeric(50000)
 for(i in 1:50000){
-  X[i] <- sample(c(U[i],P[i]),1)
+  X[i] <- sample(c(a*U[i],P[i]),1, prob = c(p,1-p))
 }
 system.time(xt <- test(X, c(0.9, 0.95, 0.99), chain.length = 10000, burnin = 2000))
 #str(X)
@@ -95,4 +104,4 @@ system.time(xt <- test(X, c(0.9, 0.95, 0.99), chain.length = 10000, burnin = 200
 coda <- as.mcmc(xt)
 summary(coda)
 #Pareto::qPareto(c(0.25,0.5,0.75), 10, 1)
-quantile(P, c(0.9, 0.95, 0.99))
+quantile(X, c(0.9, 0.95, 0.99))
