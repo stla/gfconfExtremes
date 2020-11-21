@@ -206,7 +206,7 @@ double JacobianArma(const double g,
   if(n >= 250) {
     for(size_t i = 0; i < Jnumb; i++) {
       const std::array<int,2> indices = choose2(n, generator);
-      const arma::rowvec2 row_i = {X(indices[0]), X(indices[1])};
+      const arma::rowvec2 row_i = {X.at(indices[0]), X.at(indices[1])};
       Xchoose2.row(i) = row_i;
     }
   }
@@ -217,15 +217,28 @@ double JacobianArma(const double g,
       const arma::vec Jvec = Xchoose2.col(0) % Xchoose2.col(1) % 
         (Xchoose2.col(0) - Xchoose2.col(1)) / (2.0 * s * s);
       Jmean = arma::mean(abs(Jvec));
+    } else {
+      const arma::mat XiXj = (X % X) * X.t();
+      //const arma::mat tXiXj = XiXj.t();
+      //const arma::mat Ones = arma::ones(n, n);
+      const arma::mat UpperTriOnes = arma::trimatu(arma::ones(n, n));
+      Jmean = 
+        arma::accu(abs(XiXj - XiXj.t()) * UpperTriOnes) / (s * s * n * (n-1));
     }
   } else {
-    const Rcpp::NumericMatrix A = g * (Xchoose3 - a) / s;
-    Rcpp::NumericVector Jmat0 = (log1p(A) * (1.0 + A) / g / g) * Xdiff;
-    const Rcpp::NumericVector Jvec = 
-      Jmat0[Rcpp::Range(0, Jnumb-1)] + 
-      Jmat0[Rcpp::Range(Jnumb, 2*Jnumb-1)] + 
-      Jmat0[Rcpp::Range(2*Jnumb, 3*Jnumb-1)];
-    Jmean = Rcpp::mean(Rcpp::abs(Jvec));
+    if(n >= 250) {
+      const arma::mat A = g/s * Xchoose2; 
+      const arma::vec Jvec = 
+        (Xchoose2.col(0) % (1 + A.col(1)) % log1p(A.col(1)) - 
+        Xchoose2.col(1) % (1 + A.col(0)) % log1p(A.col(0))) / g / g;
+      Jmean = arma::mean(abs(Jvec));
+    } else {
+      const arma::vec A = g/s * X; 
+      const arma::mat XiXj = X * ((1 + A) % log1p(A)).t();
+      const arma::mat UpperTriOnes = arma::trimatu(arma::ones(n, n));
+      Jmean = 
+        2 * arma::accu(abs(XiXj - XiXj.t()) * UpperTriOnes) / (g * g * n * (n-1));
+    }
   }
   return Jmean;
 }
