@@ -3,25 +3,17 @@
 #' @param X numeric vector of data
 #' @param beta vector of probabilities corresponding to the quantiles to be 
 #'   estimated
-#' @param threshold.init a guess of the unknown threshold, must be in the range 
-#'   of \code{X}
+#' @param threshold value of the known threshold, must be smaller than the
+#'   maximum of \code{X}
 #' @param gamma.init starting value for gamma in the MCMC
 #' @param sigma.init starting value for sigma in the MCMC
 #' @param sd.gamma standard deviation for the proposed gamma
 #' @param sd.sigma standard deviation for the proposed sigma
-#' @param p1 probability that the MCMC will propose a new \code{(gamma,sigma)}; 
-#'   \code{(1-p1)} would be the probability that the MCMC chain will propose a 
-#'   new index for a new threshold
-#' @param p2 probability that the new index proposed will be larger than the 
-#'   current index
-#' @param lambda1 the small jump the index variable will make
-#' @param lambda2 the large jump the index variable will make; happens 1 of 
-#'   every 10 iterations
 #' @param Jnumb number of subsamples that are taken from the Jacobian
 #' @param iter number of iterations per chain (burnin excluded)
 #' @param burnin number of the first MCMC iterations discarded
 #' @param thin thinning number for the MCMC chain. (e.g. if it is 1 no iteration 
-#' is skipped)
+#'   is skipped)
 #' @param nchains number of MCMC chains to run
 #' @param nthreads number of threads to run the chains in parallel
 #' @param seeds the seeds used for the MCMC sampler; one seed per chain, or 
@@ -42,18 +34,17 @@
 #' @importFrom foreach foreach `%dopar%`
 #'
 #' @examples set.seed(666L)
-#' X <- rgamma(500L, shape = 10, rate = 1)
-#' gf <- gfigpd(X, beta = c(0.98, 0.99), iter = 3000L)
+#' X <- rgpareto(500L, mu = 10, shape = 3, scale = 1)
+#' gf <- gfigpd1(X, beta = c(0.98, 0.99), threshold = 10, iter = 3000L)
 #' summary(gf)
-#' qgamma(c(0.98, 0.99), shape = 10, rate = 1)
-#' thresholdEstimate(gf)
+#' qgpareto(c(0.98, 0.99), mu = 10, shape = 3, scale = 1)
 #' rejectionRate(gf)
 #' HPDinterval(gf)
 #' HPDinterval(joinMCMCchains(gf))
-gfigpd <- function(
-  X, beta, threshold.init = NA, 
+gfigpd1 <- function(
+  X, beta, threshold, 
   gamma.init = NA, sigma.init = NA, sd.gamma = NA, sd.sigma = NA, 
-  p1 = 0.9, p2 = 0.5, lambda1 = 2, lambda2 = 10, Jnumb = 50L, 
+  Jnumb = 50L, 
   iter = 10000L, burnin = 2000L, thin = 6L,
   nchains = nthreads, nthreads = parallel::detectCores(), seeds = NULL) {
   
@@ -61,22 +52,16 @@ gfigpd <- function(
   nthreads <- min(nthreads, nchains)
   
   X <- sort(X) # -->> so there's no need to sort in C++
-
-  if(is.na(threshold.init)){
-    i <- floor(0.85 * length(X))
-    threshold.init <- X[i]
-  }else{
-    if(threshold.init <= X[1L] || threshold.init >= X[length(X)]){
-      stop(
-        "The value of `threshold.init` is not in the range of `X`."
-      )
-    }
-    i <- thresholdIndex(X, threshold.init)
+  
+  if(threshold >= X[length(X)]){
+    stop(
+      "The value of `threshold` is larger than the maximum of `X`."
+    )
   }
   
   # Initialize the default values for the tuning parameters of the MCMC chain
   if(is.na(gamma.init) || is.na(sigma.init)) {
-    mle.fit <- gpd.fit(X, X[i], show = FALSE)
+    mle.fit <- gpd.fit(X, threshold, show = FALSE)
     if(is.na(gamma.init)) gamma.init <- mle.fit$mle[2L]
     if(is.na(sigma.init)) sigma.init <- mle.fit$mle[1L]
   }
@@ -98,58 +83,46 @@ gfigpd <- function(
     seeds <- abs(as.integer(seeds))
   }
   
-  params <- c("gamma", "sigma", "index", paste0("beta", seq_along(beta)))
+  params <- c("gamma", "sigma", paste0("beta", seq_along(beta)))
   
   # run the MCMC chain
   if(nchains == 1L){
-    chain <- thinChain(MCMCchain(
-      X, beta, gamma.init, sigma.init, threshold.init, i, 
-      p1, p2, lambda1, lambda2, sd.gamma, sd.sigma,
-      number.iterations, burnin, Jnumb, seeds[1L]
-    ), skip.number)
+    chain <- thinChain(MCMCchainArma(
+      X, beta, gamma.init, sigma.init, 
+      threshold, prob = mean(X > threshold), 
+      sd.gamma, sd.sigma,
+      number.iterations, Jnumb, seeds[1L]
+    )[-(1L:burnin), ], skip.number)
     colnames(chain) <- params
-    chain[, 4L:(3L + length(beta))] <- chain[, 4L:(3L + length(beta))] + X[1L]
-    thresholdEstimate <- X[median(chain[,"index"])]
   }else{
     if(nthreads == 1L){
       chains <- vector("list", nchains)
       for(k in 1L:nchains){
-        chains[[k]] <- MCMCchain(
-          X, beta, gamma.init, sigma.init, i, 
-          p1, p2, lambda1, lambda2, sd.gamma, sd.sigma,
-          number.iterations, burnin, Jnumb, seeds[k]
-        )
+        chains[[k]] <- MCMCchainArma(
+          X, beta, gamma.init, sigma.init, 
+          threshold, prob = mean(X > threshold), 
+          sd.gamma, sd.sigma,
+          number.iterations, Jnumb, seeds[k]
+        )[-(1L:burnin), ]
       }
     }else{
-      # nblocks <- ceiling(nchains/nthreads)
-      # blocks <- vector("list", nblocks)
-      # nthreads <- 
-      #   c(rep(nthreads, nblocks-1L), nchains - ((nblocks-1L)*nthreads))
-      # for(b in 1L:nblocks){
-      #   registerDoParallel(cores = nthreads[b])
-      # }
       cl <- makeCluster(nthreads)
       registerDoParallel(cl)
       chains <- foreach(
         k = 1L:nchains, .combine = list, .multicombine = TRUE, 
-        .export = "MCMCchain"
-      ) %dopar% MCMCchain(
-        X, beta, gamma.init, sigma.init, threshold.init, i, 
-        p1, p2, lambda1, lambda2, sd.gamma, sd.sigma,
-        number.iterations, burnin, Jnumb, seeds[k]
-      )
+        .export = "MCMCchainArma"
+      ) %dopar% {
+        MCMCchainArma(
+          X, beta, gamma.init, sigma.init, 
+          threshold, prob = mean(X > threshold), 
+          sd.gamma, sd.sigma,
+          number.iterations, Jnumb, seeds[k]
+        )[-(1L:burnin), ]
+      }
       stopCluster(cl)
     }
     chains <- lapply(chains, thinChain, skip = skip.number)
     chains <- lapply(chains, `colnames<-`, value = params)
-    chains <- lapply(chains, function(chain){
-      chain[, 4L:(3L + length(beta))] <- chain[, 4L:(3L + length(beta))] + X[1L]
-      chain
-    })
-    index <- c(vapply(chains, function(chain){
-      chain[, "index"]
-    }, FUN.VALUE = numeric(iter)))
-    thresholdEstimate <- X[median(index)]
   }
   
   if(nchains == 1L){
@@ -160,21 +133,6 @@ gfigpd <- function(
   }
   
   attr(out, "beta") <- beta
-  attr(out, "threshold") <- thresholdEstimate
-  
-  return(out)
 
-  # # Indictor for the acceptance rate. // pas besoin avec coda::rejectionRate
-  # ii <- integer(nrow(x.t))
-  # for (i in 1L:(nrow(x.t) - 1L)) {
-  #   if (x.t[i, 4L] != x.t[i + 1L, 4L]) {
-  #     ii[i + 1L] <- 1L
-  #   }
-  # }
-  # acceptance.rate <- mean(ii)
-  # cat("acceptance rate: ", acceptance.rate)
-  # 
-  # x.t[, 4L:(3L + length(beta))] <- x.t[, 4L:(3L + length(beta))] + X[1L]
-  # 
-  # return(x.t)
+  return(out)
 }
