@@ -77,5 +77,5 @@ Title
 }
 \examples{
 data("rain", package = "ismev")
-gf <- gfigpd(rain, beta = c(0.98, 0.99))
+gf <- gfigpd(rain, beta = c(0.98, 0.99), iter = 3000L)
 }

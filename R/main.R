@@ -49,7 +49,7 @@ thinChain <- function(chain, skip){
 #' @importFrom foreach foreach `%dopar%`
 #'
 #' @examples data("rain", package = "ismev")
-#' gf <- gfigpd(rain, beta = c(0.98, 0.99))
+#' gf <- gfigpd(rain, beta = c(0.98, 0.99), iter = 3000L)
 gfigpd <- function(
   X, beta, i = floor(0.85 * length(X)), 
   gamma.init = NA, sigma.init = NA, sd.gamma = NA, sd.sigma = NA, 
@@ -68,8 +68,8 @@ gfigpd <- function(
     if(is.na(gamma.init)) gamma.init <- mle.fit$mle[2L]
     if(is.na(sigma.init)) sigma.init <- mle.fit$mle[1L]
   }
-  if(is.na(sd.gamma)) sd.gamma <- 2 * abs(g) / 3
-  if(is.na(sd.sigma)) sd.sigma <- 2 * s / 3
+  if(is.na(sd.gamma)) sd.gamma <- 2 * abs(gamma.init) / 3
+  if(is.na(sd.sigma)) sd.sigma <- 2 * sigma.init / 3
   
   skip.number <- thin - 1L
   number.iterations <- (skip.number + 1L) * iter + burnin
@@ -137,10 +137,11 @@ gfigpd <- function(
   }
   
   if(nchains == 1L){
-    out <- coda::as.mcmc(chain)
+    out <- coda::mcmc(chain, start = burnin+1L, thin = thin)
     attr(out, "threshold") <- NA
   }else{
-    out <- as.mcmc.list(chains)
+    out <- 
+      coda::mcmc.list(lapply(chains, coda::mcmc, start = burnin+1L, thin = thin))
   }
   
   return(out)
