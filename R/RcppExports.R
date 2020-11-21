@@ -2,6 +2,6 @@
 # Generator token: 10BE3573-1514-4C36-9D1C-5A225CD40393
 
 MCMCchain <- function(X, beta, g, s, a, i, p1, p2, lambda1, lambda2, sd_g, sd_s, niter, nburnin, Jnumb, seed) {
-    .Call('_gfconfExtremes_MCMCchain', PACKAGE = 'gfconfExtremes', X, beta, g, s, a, i, p1, p2, lambda1, lambda2, sd_g, sd_s, niter, nburnin, Jnumb, seed)
+    .Call('_gfiExtremes_MCMCchain', PACKAGE = 'gfiExtremes', X, beta, g, s, a, i, p1, p2, lambda1, lambda2, sd_g, sd_s, niter, nburnin, Jnumb, seed)
 }
 

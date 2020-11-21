@@ -1,4 +1,4 @@
-#' @useDynLib gfconfExtremes
+#' @useDynLib gfiExtremes
 #' @importFrom Rcpp evalCpp
 NULL
 

@@ -18,7 +18,7 @@
 #' @export
 dgpareto <- function(x, mu, gamma, sigma, log = FALSE){ 
   stopifnot(gamma >= 0, sigma > 0)
-  out <- numeric(length(x))
+  out <- if(log) log(numeric(length(x))) else numeric(length(x))
   less_than_mu <- q < mu
   in_support <- !less_than_mu
   if(any(in_support)){

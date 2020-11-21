@@ -1,6 +1,6 @@
-Package: gfconfExtremes
+Package: gfiExtremes
 Type: Package
-Title: Generalized Fiducial Confidence Intervals for Extremes
+Title: Generalized Fiducial Inference for Extremes
 Version: 0.1.0
 Authors@R: c(
     person("Stéphane", "Laurent", role = c("aut", "cre"), 
