@@ -119,17 +119,16 @@ Rcpp::NumericVector BetaQuantile(const double g,
   return Q;
 }
 
-arma::rowvec BetaQuantileArma(const double g,
+arma::vec BetaQuantileArma(const double g,
                                  const double s,
                                  const double a,
                                  const double prob,
-                                 const arma::rowvec& beta) {
-  arma::rowvec alpha = (1.0 - beta) / prob;
-  arma::rowvec Q;
+                                 const arma::vec& beta) {
+  arma::vec Q;
   if(g == 0.0) {
-    Q = a - s * log(alpha);
+    Q = a - s * log((1.0 - beta) / prob);
   } else {
-    Q = a + s / g * (pow(alpha, -g) - 1);
+    Q = a + s / g * (pow((1.0 - beta) / prob, -g) - 1);
   }
   return Q;
 }
@@ -194,7 +193,44 @@ double Jacobian(const double g,
   return Jmean;
 }
 
-//~ XXX - ~//
+double JacobianArma(const double g,
+                const double s,
+                const double a,
+                const size_t Jnumb,
+                arma::vec& X,
+                const int n,
+                std::default_random_engine& generator) {
+
+  X = X - a;
+  arma::mat Xchoose2(Jnumb, 2);
+  if(n >= 250) {
+    for(size_t i = 0; i < Jnumb; i++) {
+      const std::array<int,2> indices = choose2(n, generator);
+      const arma::rowvec2 row_i = {X(indices[0]), X(indices[1])};
+      Xchoose2.row(i) = row_i;
+    }
+  }
+
+  double Jmean;
+  if(g == 0.0) {
+    if(n >= 250) {
+      const arma::vec Jvec = Xchoose2.col(0) % Xchoose2.col(1) % 
+        (Xchoose2.col(0) - Xchoose2.col(1)) / (2.0 * s * s);
+      Jmean = arma::mean(abs(Jvec));
+    }
+  } else {
+    const Rcpp::NumericMatrix A = g * (Xchoose3 - a) / s;
+    Rcpp::NumericVector Jmat0 = (log1p(A) * (1.0 + A) / g / g) * Xdiff;
+    const Rcpp::NumericVector Jvec = 
+      Jmat0[Rcpp::Range(0, Jnumb-1)] + 
+      Jmat0[Rcpp::Range(Jnumb, 2*Jnumb-1)] + 
+      Jmat0[Rcpp::Range(2*Jnumb, 3*Jnumb-1)];
+    Jmean = Rcpp::mean(Rcpp::abs(Jvec));
+  }
+  return Jmean;
+}
+
+//~ log-density of generalized Pareto XXX ---------------------------------- ~//
 const double log_gpd_dens(const double g,
                           const double s,
                           const double a,
