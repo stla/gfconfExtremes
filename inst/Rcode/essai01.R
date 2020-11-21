@@ -88,9 +88,10 @@ X <- numeric(50000)
 for(i in 1:50000){
   X[i] <- sample(c(U[i],P[i]),1)
 }
-xt <- test(X, c(0.25,0.5,0.75), chain.length = 4000, burnin = 2000)
+system.time(xt <- test(X, c(0.9, 0.95, 0.99), chain.length = 10000, burnin = 2000))
 #str(X)
 
 coda <- as.mcmc(xt)
 summary(coda)
-Pareto::qPareto(c(0.25,0.5,0.75), 10, 1)
+#Pareto::qPareto(c(0.25,0.5,0.75), 10, 1)
+quantile(P, c(0.9, 0.95, 0.99))

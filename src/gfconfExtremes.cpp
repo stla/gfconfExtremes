@@ -3,6 +3,7 @@
 #include <random>
 // [[Rcpp::depends(BH)]]
 
+/*
 //~ construct vector {0, 1, ..., n-1} -------------------------------------- ~//
 template <class T>
 std::vector<T> integers_n(T n) {
@@ -13,7 +14,6 @@ std::vector<T> integers_n(T n) {
   return out;
 }
 
-/*
 //~ take k first elements of a vector -------------------------------------- ~//
 template <class T>
 std::vector<T> takeFirsts(const std::vector<T>& v, size_t k) {
@@ -37,7 +37,6 @@ const std::vector<size_t> sample_int(const size_t n,
                                      std::default_random_engine& generator) {
   return takeFirsts(shuffle_n(n, generator), k);
 }
-*/
 
 //~ sample three integers among {0, 1, ..., n-1} --------------------------- ~//
 const std::vector<int> choose3(std::vector<int> elems, const int n,
@@ -54,6 +53,22 @@ const std::vector<int> choose3(std::vector<int> elems, const int n,
   elems.erase(elems.begin() + i2);
   const int j3 = elems[i3];
   return {i1, j2, j3};
+}
+*/
+
+//~ sample three integers among {0, 1, ..., n-1} --------------------------- ~//
+const std::array<int,3> choose3(const int n,
+                               std::default_random_engine& generator) {
+  std::uniform_int_distribution<int> sampler1(0, n - 1);
+  std::uniform_int_distribution<int> sampler2(0, n - 2);
+  std::uniform_int_distribution<int> sampler3(0, n - 3);
+  const int i1 = sampler1(generator);
+  int i2 = sampler2(generator);
+  int i3 = sampler3(generator);
+  if(i3 == i2) i3 = n - 2;
+  if(i3 == i1) i3 = n - 1;
+  if(i2 == i1) i2 = n - 1;
+  return {i1, i2, i3};
 }
 
 //~ product of vector elements --------------------------------------------- ~//
@@ -97,10 +112,9 @@ double Jacobian(const double g,
                 std::default_random_engine& generator) {
   Rcpp::NumericMatrix Xchoose3(Jnumb, 3);
   const int n = X.size();
-  std::vector<int> elems_n = integers_n(n);
   // // Rcpp::Rcout << "n: " << n << "\n";
   for(size_t i = 0; i < Jnumb; i++) {
-    const std::vector<int> indices = choose3(elems_n, n, generator);
+    const std::array<int,3> indices = choose3(n, generator);
     //const std::vector<int> indices = {0,1,2};
     // const Rcpp::IntegerVector indices(indices0.begin(), indices0.end());
     //// Rcpp::Rcout << indices[0] << " - " << indices[1] << " - " << indices[2] << "\n";
@@ -175,7 +189,7 @@ std::uniform_real_distribution<double> uniform(0.0, 1.0);
 std::cauchy_distribution<double> cauchy(0.0, 1.0);
 
 //~ propose a new (gamma,sigma) value or a new index for the threshold ----- ~//
-std::vector<double> MCMCnewpoint(const double g,
+std::array<double,3> MCMCnewpoint(const double g,
                                  const double s,
                                  const double i_dbl,
                                  const double p1,
@@ -245,7 +259,7 @@ std::vector<double> MCMCnewpoint(const double g,
 
   // // Rcpp::Rcout << "ratio: " << MHratio << "\n";
 
-  std::vector<double> newpoint;
+  std::array<double,3> newpoint;
   if(!std::isnan(MHratio) && !std::isinf(MHratio) &&
      uniform(generator) < MHratio) {
     newpoint = {g_star, s_star, (double)i_star};
@@ -315,7 +329,7 @@ Rcpp::NumericMatrix MCMCchain(Rcpp::NumericVector X,
 
     bool b = j % 10 == 0;
     lambda = b ? lambda2 : lambda1;
-    std::vector<double> gsi;
+    std::array<double,3> gsi;
     if(lambda < i_dbl) {
       if(b) {
         gsi = MCMCnewpoint(xt(j, 0), xt(j, 1), xt(j, 2), p1, p2, lambda, sd_g,
