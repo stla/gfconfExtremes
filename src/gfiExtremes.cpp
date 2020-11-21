@@ -1,7 +1,8 @@
-#include <Rcpp.h>
+#include "RcppArmadillo.h"
 #include <boost/math/special_functions/gamma.hpp>
 #include <random>
 // [[Rcpp::depends(BH)]]
+// [[Rcpp::depends(RcppArmadillo)]]
 
 /*
 //~ construct vector {0, 1, ..., n-1} -------------------------------------- ~//
@@ -71,6 +72,20 @@ const std::array<int,3> choose3(const int n,
   return {i1, i2, i3};
 }
 
+//~ sample two integers among {0, 1, ..., n-1} ----------------------------- ~//
+const std::array<int,2> choose2(const int n,
+                                std::default_random_engine& generator) {
+  std::uniform_int_distribution<int> sampler1(0, n - 1);
+  std::uniform_int_distribution<int> sampler2(0, n - 2);
+  const int i1 = sampler1(generator);
+  int i2 = sampler2(generator);
+  if(i2 == i1) {
+    i2 = i1 == n - 2 ? n - 1 : n - 2; 
+  }
+  return {i1, i2};
+}
+
+/*
 //~ product of vector elements --------------------------------------------- ~//
 const double product(const Rcpp::NumericVector v) {
   double out = 1.0;
@@ -86,6 +101,7 @@ Rcpp::NumericVector stl_sort(const Rcpp::NumericVector x) {
   std::sort(y.begin(), y.end());
   return y;
 }
+*/
 
 //~ Beta-quantiles for a vector `beta` ------------------------------------- ~//
 Rcpp::NumericVector BetaQuantile(const double g,
@@ -95,6 +111,21 @@ Rcpp::NumericVector BetaQuantile(const double g,
                                  const Rcpp::NumericVector beta) {
   Rcpp::NumericVector alpha = (1.0 - beta) / prob;
   Rcpp::NumericVector Q;
+  if(g == 0.0) {
+    Q = a - s * log(alpha);
+  } else {
+    Q = a + s / g * (pow(alpha, -g) - 1);
+  }
+  return Q;
+}
+
+arma::rowvec BetaQuantileArma(const double g,
+                                 const double s,
+                                 const double a,
+                                 const double prob,
+                                 const arma::rowvec& beta) {
+  arma::rowvec alpha = (1.0 - beta) / prob;
+  arma::rowvec Q;
   if(g == 0.0) {
     Q = a - s * log(alpha);
   } else {
@@ -131,14 +162,23 @@ double Jacobian(const double g,
   Xdiff(Rcpp::_, 2) = Xchoose3(Rcpp::_, 0) - Xchoose3(Rcpp::_, 1);
   double Jmean;
   if(g == 0.0) {
+    const Rcpp::NumericVector Jvec = 
+      Xdiff(Rcpp::_, 0) * Xdiff(Rcpp::_, 1) * Xdiff(Rcpp::_, 2);
+    /*  
     Rcpp::NumericVector Jvec(Jnumb);
     for(size_t i = 0; i < Jnumb; i++) {
-      Jvec(i) = product(Xdiff(i, Rcpp::_));
+      Jvec(i) = Xdiff(i, 0) * Xdiff(i, 1) * Xdiff(i, 2);
     }
+    */
     Jmean = Rcpp::mean(Rcpp::abs(Jvec));
   } else {
-    Rcpp::NumericMatrix A = g * (Xchoose3 - a) / s;
+    const Rcpp::NumericMatrix A = g * (Xchoose3 - a) / s;
     Rcpp::NumericVector Jmat0 = (log1p(A) * (1.0 + A) / g / g) * Xdiff;
+    const Rcpp::NumericVector Jvec = 
+      Jmat0[Rcpp::Range(0, Jnumb-1)] + 
+      Jmat0[Rcpp::Range(Jnumb, 2*Jnumb-1)] + 
+      Jmat0[Rcpp::Range(2*Jnumb, 3*Jnumb-1)];
+    /*
     Rcpp::NumericMatrix Jmat(Jnumb, 3);
     Jmat(Rcpp::_, 0) = Jmat0[Rcpp::Range(0, Jnumb-1)];
     Jmat(Rcpp::_, 1) = Jmat0[Rcpp::Range(Jnumb, 2*Jnumb-1)];
@@ -148,6 +188,7 @@ double Jacobian(const double g,
     for(size_t i = 0; i < Jnumb; i++) {
       Jvec(i) = Rcpp::sum(Jmat(i, Rcpp::_));
     }
+    */
     Jmean = Rcpp::mean(Rcpp::abs(Jvec));
   }
   return Jmean;

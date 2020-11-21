@@ -13,7 +13,7 @@ Description: Fiducial framework to perform inference on the parameters and the e
 License: GPL (>= 2)
 Depends: coda
 Imports: Rcpp (>= 1.0.5), ismev, parallel, doParallel, foreach, stats
-LinkingTo: Rcpp, BH
+LinkingTo: Rcpp, BH, RcppArmadillo
 Encoding: UTF-8
 RoxygenNote: 7.1.1
 URL: https://github.com/stla/gfconfExtremes

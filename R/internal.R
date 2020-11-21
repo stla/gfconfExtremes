@@ -5,7 +5,7 @@ NULL
 thinChain <- function(chain, skip){
   niterations <- nrow(chain)
   every.ith <- c(TRUE, rep(FALSE, skip))
-  keep <- rep(every.ith, ceiling(niterations / (skip+1L)))[1:niterations]
+  keep <- rep(every.ith, ceiling(niterations / (skip+1L)))[1L:niterations]
   chain[keep, ]
 }
 
