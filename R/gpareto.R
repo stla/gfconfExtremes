@@ -1,38 +1,17 @@
-#' Generalized pareto distribution
+#' Generalized Pareto distribution
 #' @description Density, distribution function, quantile function, and random 
-#'   generation for the generalized pareto distribution.
+#'   generation for the generalized Pareto distribution.
 #'   
-#' @param u numeric vector
+#' @param x numeric vector
 #' @param q numeric vector of quantiles
 #' @param p numeric vector of probabilities
 #' @param n positive integer, the desired number of simulations
-#' @param c,d,kappa,tau parameters; they must be strictly positive numbers, 
-#'   except \code{kappa} which can take any value
+#' @param mu location parameter
+#' @param gamma shape parameter, positive
+#' @param sigma scale parameter, strictly positive
 #' @param log logical, whether to return the log-density
-#' @param method the method of random generation, \code{"mixture"} or 
-#'   \code{"arou"}; only a positive \code{kappa} is allowed for the 
-#'   \code{"mixture"} method, but this method is faster
-#'   
-#' @references 
-#' \itemize{
-#'   \item Marwa Hamza & Pierre Vallois. 
-#'     \emph{On Kummer’s distributions of type two and generalized pareto 
-#'           distributions}.
-#'     Statistics & Probability Letters 118 (2016), pp. 60-69.
-#'     <doi:10.1016/j.spl.2016.03.014>
-#'   \item James J. Chen & Melvin R. Novick.
-#'     \emph{Bayesian Analysis for Binomial Models with Generalized pareto Prior 
-#'           Distributions}.
-#'     Journal of Educational Statistics 9, No. 2 (1984), pp. 163-175.
-#'     <doi:10.3102/10769986009002163>
-#' }
 #' 
-#' @examples library(gpareto)
-#' curve(dgpareto(x, 4, 12, 10, 0.01), axes = FALSE, lwd = 2)
-#' axis(1)
-#' 
-#' @importFrom stats qpareto
-#' @importFrom Runuran uq
+#' @importFrom stats runif
 #' 
 #' @rdname GPareto
 #' @name GPareto
