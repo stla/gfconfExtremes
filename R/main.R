@@ -1,24 +1,10 @@
-#' @useDynLib gfconfExtremes
-#' @importFrom Rcpp evalCpp
-NULL
-
-thinChain <- function(chain, skip){
-  number.iterations <- nrow(chain)
-  every.ith <- c(TRUE, rep(FALSE, skip))
-  eliminate.vector <-
-    rep(
-      every.ith,
-      ceiling((number.iterations) / length(every.ith))
-    )[1:number.iterations]
-  chain[eliminate.vector, ]
-}
-
 #' Title
 #'
 #' @param X numeric vector of data
 #' @param beta vector of probabilities corresponding to the quantiles to be 
 #'   estimated
-#' @param i index for the initial threshold at the \code{X(i)} order statistic
+#' @param threshold.init a guess of the unknown threshold, must be in the range 
+#'   of \code{X}
 #' @param gamma.init starting value for gamma in the MCMC
 #' @param sigma.init starting value for sigma in the MCMC
 #' @param sd.gamma standard deviation for the proposed gamma
@@ -41,17 +27,23 @@ thinChain <- function(chain, skip){
 #' @param seeds the seeds used for the MCMC sampler; one seed per chain, or 
 #'   \code{NULL} to use random seeds
 #'
-#' @return
+#' @return An object of class \code{\link[coda:mcmc]{mcmc}} if \code{nchains=1}, 
+#'   otherwise an object of class \code{\link[coda:mcmc.list]{mcmc.list}}. 
+#' 
 #' @export
 #' @importFrom ismev gpd.fit
 #' @importFrom doParallel registerDoParallel
 #' @importFrom parallel makeCluster stopCluster
 #' @importFrom foreach foreach `%dopar%`
 #'
-#' @examples data("rain", package = "ismev")
-#' gf <- gfigpd(rain, beta = c(0.98, 0.99), iter = 3000L)
+#' @examples set.seed(666L)
+#' X <- abs(rcauchy(200L))
+#' gf <- gfigpd(X, beta = c(0.98, 0.99), iter = 3000L)
+#' summary(gf)
+#' thresholdEstimate(gf)
+#' rejectionRate(gf)
 gfigpd <- function(
-  X, beta, i = floor(0.85 * length(X)), 
+  X, beta, threshold.init = NA, 
   gamma.init = NA, sigma.init = NA, sd.gamma = NA, sd.sigma = NA, 
   p1 = 0.9, p2 = 0.5, lambda1 = 2, lambda2 = 10, Jnumb = 50L, 
   iter = 10000L, burnin = 2000L, thin = 6L,
@@ -62,7 +54,19 @@ gfigpd <- function(
   
   X <- sort(X) # -->> so there's no need to sort in C++
 
-  # Intialize the default values for the tuning parameters of the MCMC chain.
+  if(is.na(threshold.init)){
+    i <- floor(0.85 * length(X))
+    threshold.init <- X[i]
+  }else{
+    if(threshold.init <= X[1L] || threshold.init >= X[length(X)]){
+      stop(
+        "The value of `threshold.init` is not in the range of `X`."
+      )
+    }
+    i <- thresholdIndex(X, threshold.init)
+  }
+  
+  # Initialize the default values for the tuning parameters of the MCMC chain
   if(is.na(gamma.init) || is.na(sigma.init)) {
     mle.fit <- gpd.fit(X, X[i], show = FALSE)
     if(is.na(gamma.init)) gamma.init <- mle.fit$mle[2L]
@@ -91,12 +95,13 @@ gfigpd <- function(
   # run the MCMC chain
   if(nchains == 1L){
     chain <- thinChain(MCMCchain(
-      X, beta, gamma.init, sigma.init, i, 
+      X, beta, gamma.init, sigma.init, threshold.init, i, 
       p1, p2, lambda1, lambda2, sd.gamma, sd.sigma,
       number.iterations, burnin, Jnumb, seeds[1L]
     ), skip.number)
     colnames(chain) <- params
     chain[, 4L:(3L + length(beta))] <- chain[, 4L:(3L + length(beta))] + X[1L]
+    thresholdEstimate <- X[median(chain[,"index"])]
   }else{
     if(nthreads == 1L){
       chains <- vector("list", nchains)
@@ -121,7 +126,7 @@ gfigpd <- function(
         k = 1L:nchains, .combine = list, .multicombine = TRUE, 
         .export = "MCMCchain"
       ) %dopar% MCMCchain(
-        X, beta, gamma.init, sigma.init, i, 
+        X, beta, gamma.init, sigma.init, threshold.init, i, 
         p1, p2, lambda1, lambda2, sd.gamma, sd.sigma,
         number.iterations, burnin, Jnumb, seeds[k]
       )
@@ -133,16 +138,21 @@ gfigpd <- function(
       chain[, 4L:(3L + length(beta))] <- chain[, 4L:(3L + length(beta))] + X[1L]
       chain
     })
-    # threshold per chain ? non, combiner...
+    index <- c(vapply(chains, function(chain){
+      chain[, "index"]
+    }, FUN.VALUE = numeric(iter)))
+    thresholdEstimate <- X[median(index)]
   }
   
   if(nchains == 1L){
     out <- coda::mcmc(chain, start = burnin+1L, thin = thin)
-    attr(out, "threshold") <- NA
   }else{
     out <- 
       coda::mcmc.list(lapply(chains, coda::mcmc, start = burnin+1L, thin = thin))
   }
+  
+  attr(out, "beta") <- beta
+  attr(out, "threshold") <- thresholdEstimate
   
   return(out)
 

@@ -7,7 +7,7 @@
 gfigpd(
   X,
   beta,
-  i = floor(0.85 * length(X)),
+  threshold.init = NA,
   gamma.init = NA,
   sigma.init = NA,
   sd.gamma = NA,
@@ -31,7 +31,8 @@ gfigpd(
 \item{beta}{vector of probabilities corresponding to the quantiles to be 
 estimated}
 
-\item{i}{index for the initial threshold at the \code{X(i)} order statistic}
+\item{threshold.init}{a guess of the unknown threshold, must be in the range 
+of \code{X}}
 
 \item{gamma.init}{starting value for gamma in the MCMC}
 
@@ -70,12 +71,17 @@ is skipped)}
 \code{NULL} to use random seeds}
 }
 \value{
-
+An object of class \code{\link[coda:mcmc]{mcmc}} if \code{nchains=1}, 
+  otherwise an object of class \code{\link[coda:mcmc.list]{mcmc.list}}.
 }
 \description{
 Title
 }
 \examples{
-data("rain", package = "ismev")
-gf <- gfigpd(rain, beta = c(0.98, 0.99), iter = 3000L)
+set.seed(666L)
+X <- abs(rcauchy(200L))
+gf <- gfigpd(X, beta = c(0.98, 0.99), iter = 3000L)
+summary(gf)
+thresholdEstimate(gf)
+rejectionRate(gf)
 }

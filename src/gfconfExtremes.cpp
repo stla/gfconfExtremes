@@ -292,6 +292,7 @@ Rcpp::NumericMatrix MCMCchain(Rcpp::NumericVector X,
                               const Rcpp::NumericVector beta,
                               const double g,
                               const double s,
+                              const double a,
                               const int i,
                               const double p1,
                               const double p2,
@@ -315,7 +316,7 @@ Rcpp::NumericMatrix MCMCchain(Rcpp::NumericVector X,
   Rcpp::NumericMatrix xt(niter, 3 + lbeta);
   xt(0, Rcpp::_) =
       concat(g, s, i_dbl,  // caution with X(i) !!
-             BetaQuantile(g, s, X(i - 1), 1.0 - i_dbl / n, beta), lbeta);
+             BetaQuantile(g, s, a, 1.0 - i_dbl / n, beta), lbeta);
 
   std::poisson_distribution<int> poisson1(lambda1);
   std::poisson_distribution<int> poisson2(lambda2);
