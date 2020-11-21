@@ -274,6 +274,32 @@ const double log_gpd_dens(const double g,
   return log_density;
 }
 
+const double log_gpd_densArma(const double g,
+                          const double s,
+                          const double a,
+                          arma::vec& X,
+                          const size_t Jnumb,
+                          std::default_random_engine& generator) {
+  double log_density;
+  X = X.elem(find(X > a));
+  const int n = X.size();
+  const double Max = arma::max(X - a);
+  
+  if(s > 0 && g > (-s / Max)) {
+    const double J = JacobianArma(g, s, a, Jnumb, X, n, generator);
+
+    if(g == 0.0) {
+      log_density = arma::accu(a - X) / s + log(J) - n * log(s);
+    } else {
+      log_density = arma::accu((-1 / g - 1) * log1p(g * (X - a) / s)) + log(J); 
+    }
+  } else {
+    log_density = -INFINITY;
+  }
+
+  return log_density;
+}
+
 //~ distributions to be sampled -------------------------------------------- ~//
 std::uniform_real_distribution<double> uniform(0.0, 1.0);
 std::cauchy_distribution<double> cauchy(0.0, 1.0);
@@ -360,6 +386,22 @@ std::array<double,3> MCMCnewpoint(const double g,
   return newpoint;
 }
 
+arma::vec2 MCMCnewpointArma(const double g,
+                                  const double s,
+                                  const double a,
+                                  const double sd_g,
+                                  const double sd_s,
+                                  const arma::vec& X,
+                                  const size_t Jnumb,
+                                  std::default_random_engine& generator){
+  const double g_star = g + sd_g * cauchy(generator);
+  const double s_star = s + sd_s * cauchy(generator);
+  const double MHratio = 
+    exp(log_gpd_densArma(g_star, s_star, a, X, Jnumb) - 
+    log_gpd_densArma(g, s, a, X, Jnumb));
+  
+}
+                                  
 //~ helper function for MCMCchain ------------------------------------------ ~//
 Rcpp::NumericVector concat(const double g,
                            const double s,
