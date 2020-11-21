@@ -122,12 +122,12 @@ Rcpp::NumericVector BetaQuantile(const double g,
   return Q;
 }
 
-arma::vec BetaQuantileArma(const double g,
-                           const double s,
-                           const double a,
-                           const double prob,
-                           const arma::vec& beta) {
-  arma::vec Q;
+arma::rowvec BetaQuantileArma(const double g,
+                              const double s,
+                              const double a,
+                              const double prob,
+                              const arma::rowvec& beta) {
+  arma::rowvec Q;
   if(g == 0.0) {
     Q = a - s * log((1.0 - beta) / prob);
   } else {
@@ -393,26 +393,27 @@ std::array<double, 3> MCMCnewpoint(const double g,
   return newpoint;
 }
 
-arma::vec2 MCMCnewpointArma(const double g,
-                            const double s,
-                            const double a,
-                            const double sd_g,
-                            const double sd_s,
-                            arma::vec& X,
-                            const size_t Jnumb,
-                            std::default_random_engine& generator) {
+arma::rowvec2 MCMCnewpointArma(const double g,
+                               const double s,
+                               const double a,
+                               const double sd_g,
+                               const double sd_s,
+                               arma::vec& X,
+                               const size_t Jnumb,
+                               std::default_random_engine& generator) {
   const double g_star = g + sd_g * cauchy(generator);
   const double s_star = s + sd_s * cauchy(generator);
   const double MHratio =
       exp(log_gpd_densArma(g_star, s_star, a, X, Jnumb, generator) -
           log_gpd_densArma(g, s, a, X, Jnumb, generator));
-  arma::vec2 newpoint;
+  arma::rowvec2 newpoint;
   if(!std::isnan(MHratio) && !std::isinf(MHratio) &&
      uniform(generator) < MHratio) {
     newpoint = {g_star, s_star};
   } else {
     newpoint = {g, s};
   }
+  return newpoint;
 }
 
 //~ helper function for MCMCchain ------------------------------------------ ~//
@@ -507,4 +508,30 @@ Rcpp::NumericMatrix MCMCchain(Rcpp::NumericVector X,
   eliminate = eliminate[Rcpp::Range(0,niter)];
   xt = xt[eliminate, Rcpp::_];
   */
+}
+
+// [[Rcpp::export]]
+arma::mat MCMCchainArma(arma::vec& X,
+                        const arma::rowvec& beta,
+                        const double g,
+                        const double s,
+                        const double a,
+                        const double prob,
+                        const double sd_g,
+                        const double sd_s,
+                        const size_t niter,
+                        const size_t Jnumb,
+                        const unsigned seed) {
+  std::default_random_engine generator(seed);
+  arma::mat xt(niter, 2 + beta.size());
+  arma::rowvec2 gs = {g, s};
+  xt.row(0) = arma::join_rows(gs, BetaQuantileArma(g, s, a, prob, beta));
+  for(size_t j = 0; j < niter - 1; j++) {
+    arma::rowvec2 newpoint = MCMCnewpointArma(xt.at(j, 0), xt.at(j, 1), a, sd_g,
+                                              sd_s, X, Jnumb, generator);
+    xt.row(j + 1) = arma::join_rows(
+        newpoint,
+        BetaQuantileArma(newpoint.at(0), newpoint.at(1), a, prob, beta));
+  }
+  return xt;
 }
