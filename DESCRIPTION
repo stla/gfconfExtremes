@@ -1,15 +1,20 @@
 Package: gfconfExtremes
 Type: Package
-Title: What the Package Does in One 'Title Case' Line
-Version: 1.0
-Date: 2020-11-19
-Author: Your Name
-Maintainer: Your Name <your@email.com>
-Description: One paragraph description of what the package does as one or
-        more full sentences.
+Title: Generalized Fiducial Confidence Intervals for Extremes
+Version: 0.1.0
+Authors@R: c(
+    person("Stéphane", "Laurent", role = c("aut", "cre"), 
+           email = "laurent_step@outlook.fr"),
+    person("Jan", "Hannig", role = "aut"),
+    person("Damian", "V. Wandler", role = "aut")
+  )
+Maintainer: Stéphane Laurent <laurent_step@outlook.fr>
+Description: Reference: Damian V. Wandler & Jan Hannig (2012) <doi:10.1007/s10687-011-0127-9>.
 License: GPL (>= 2)
 Depends: coda
 Imports: Rcpp (>= 1.0.5), ismev, parallel, doParallel, foreach
 LinkingTo: Rcpp, BH
 Encoding: UTF-8
 RoxygenNote: 7.1.1
+URL: https://github.com/stla/gfconfExtremes
+BugReports: https://github.com/stla/gfconfExtremes/issues

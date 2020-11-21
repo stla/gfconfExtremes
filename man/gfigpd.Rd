@@ -85,3 +85,9 @@ summary(gf)
 thresholdEstimate(gf)
 rejectionRate(gf)
 }
+\references{
+Damian V. Wandler & Jan Hannig. 
+  \emph{Generalized fiducial confidence intervals for extremes}.
+  Extremes (2012) 15:67–87.
+  <doi:10.1007/s10687-011-0127-9>
+}

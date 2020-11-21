@@ -28,7 +28,12 @@
 #'   \code{NULL} to use random seeds
 #'
 #' @return An object of class \code{\link[coda:mcmc]{mcmc}} if \code{nchains=1}, 
-#'   otherwise an object of class \code{\link[coda:mcmc.list]{mcmc.list}}. 
+#'   otherwise an object of class \code{\link[coda:mcmc.list]{mcmc.list}}.
+#'   
+#' @references Damian V. Wandler & Jan Hannig. 
+#'   \emph{Generalized fiducial confidence intervals for extremes}.
+#'   Extremes (2012) 15:67–87.
+#'   <doi:10.1007/s10687-011-0127-9>
 #' 
 #' @export
 #' @importFrom ismev gpd.fit
