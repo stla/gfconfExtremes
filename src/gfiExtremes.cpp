@@ -202,10 +202,10 @@ double JacobianArma(const double g,
                     const double s,
                     const double a,
                     const size_t Jnumb,
-                    arma::vec& X,
+                    const arma::vec& Xo,
                     const int n,
                     std::default_random_engine& generator) {
-  X = X - a;
+  const arma::vec X = Xo - a;
   arma::mat Xchoose2(Jnumb, 2);
   if(n >= 250) {
     for(size_t i = 0; i < Jnumb; i++) {
@@ -284,12 +284,14 @@ const double log_gpd_dens(const double g,
 const double log_gpd_densArma(const double g,
                               const double s,
                               const double a,
-                              arma::vec& X,
+                              const arma::vec& Xo,
                               const size_t Jnumb,
                               std::default_random_engine& generator) {
   double log_density;
-  X = X.elem(find(X > a));
+  const arma::vec X = Xo.elem(arma::find(Xo > a));
   const int n = X.size();
+  Rcpp::Rcout << "n: " << n << "\n"; 
+  Rcpp::Rcout << "a: " << a << "\n"; 
   const double Max = arma::max(X - a);
 
   if(s > 0 && g > (-s / Max)) {
@@ -398,7 +400,7 @@ arma::rowvec2 MCMCnewpointArma(const double g,
                                const double a,
                                const double sd_g,
                                const double sd_s,
-                               arma::vec& X,
+                               const arma::vec& X,
                                const size_t Jnumb,
                                std::default_random_engine& generator) {
   const double g_star = g + sd_g * cauchy(generator);
@@ -511,7 +513,7 @@ Rcpp::NumericMatrix MCMCchain(Rcpp::NumericVector X,
 }
 
 // [[Rcpp::export]]
-arma::mat MCMCchainArma(arma::vec& X,
+arma::mat MCMCchainArma(const arma::vec& X,
                         const arma::rowvec& beta,
                         const double g,
                         const double s,
