@@ -60,13 +60,14 @@ gfigpd1 <- function(
   }
   
   # Initialize the default values for the tuning parameters of the MCMC chain
+  n <- sum(X >= threshold)
   if(is.na(gamma.init) || is.na(sigma.init)) {
     mle.fit <- gpd.fit(X, threshold, show = FALSE)
     if(is.na(gamma.init)) gamma.init <- mle.fit$mle[2L]
     if(is.na(sigma.init)) sigma.init <- mle.fit$mle[1L]
   }
-  if(is.na(sd.gamma)) sd.gamma <- 2 * abs(gamma.init) / 3
-  if(is.na(sd.sigma)) sd.sigma <- 2 * sigma.init / 3
+  if(is.na(sd.gamma)) sd.gamma <- .3 / log(n, 20)
+  if(is.na(sd.sigma)) sd.sigma <- sigma.init * .3 / log(n, 20)
   
   skip.number <- thin - 1L
   number.iterations <- (skip.number + 1L) * iter + burnin

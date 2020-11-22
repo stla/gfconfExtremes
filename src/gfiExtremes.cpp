@@ -227,7 +227,7 @@ double JacobianArma(const double g,
       // const arma::mat tXiXj = XiXj.t();
       // const arma::mat Ones = arma::ones(n, n);
       const arma::mat UpperTriOnes = arma::trimatu(arma::ones(n, n));
-      Jmean = arma::accu(abs(XiXj - XiXj.t()) * UpperTriOnes) /
+      Jmean = arma::accu(abs(XiXj - XiXj.t()) % UpperTriOnes) /
               (s * s * n * (n - 1));
     }
   } else {
@@ -242,7 +242,7 @@ double JacobianArma(const double g,
       const arma::vec A = g / s * X;
       const arma::mat XiXj = X * ((1 + A) % log1p(A)).t();
       const arma::mat UpperTriOnes = arma::trimatu(arma::ones(n, n));
-      Jmean = 2 * arma::accu(abs(XiXj - XiXj.t()) * UpperTriOnes) /
+      Jmean = 2 * arma::accu(abs(XiXj - XiXj.t()) % UpperTriOnes) /
               (g * g * n * (n - 1));
     }
   }
@@ -290,9 +290,7 @@ const double log_gpd_densArma(const double g,
   double log_density;
   const arma::vec X = Xo.elem(arma::find(Xo > a));
   const int n = X.size();
-  Rcpp::Rcout << "n: " << n << "\n"; 
-  Rcpp::Rcout << "a: " << a << "\n"; 
-  const double Max = arma::max(X - a);
+  const double Max = arma::max(X - a); // tout ça me semble fixe et c'est calculé à chaque itération !
 
   if(s > 0 && g > (-s / Max)) {
     const double J = JacobianArma(g, s, a, Jnumb, X, n, generator);
@@ -300,7 +298,8 @@ const double log_gpd_densArma(const double g,
     if(g == 0.0) {
       log_density = arma::accu(a - X) / s + log(J) - n * log(s);
     } else {
-      log_density = arma::accu((-1 / g - 1) * log1p(g * (X - a) / s)) + log(J);
+      log_density = 
+        (-1 / g - 1) * arma::accu(log1p(g * (X - a) / s)) + log(J) - n * log(s);
     }
   } else {
     log_density = -INFINITY;
